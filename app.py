@@ -56,9 +56,9 @@ def assign_trials(db, participant_id: int) -> None:
     counts = db.execute("SELECT category, material, COUNT(*) c FROM trials GROUP BY category, material").fetchall()
     count_map = {(r['category'], r['material']): r['c'] for r in counts}
     all_combos = [(c, m) for c in CATEGORIES for m in MATERIALS]
+    random.shuffle(all_combos)
     all_combos.sort(key=lambda x: count_map.get(x, 0))
     selected = all_combos[:TRIALS_PER_PARTICIPANT]
-    random.shuffle(selected)
     for order, (cat, mat) in enumerate(selected, 1):
         db.execute("INSERT INTO trials (participant_id, category, material, trial_order) VALUES (?,?,?,?)", (participant_id, cat, mat, order))
     db.commit()

@@ -35,21 +35,21 @@
           <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((cat_acc or 0) * 100) }}</td>
           <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((mat_acc or 0) * 100) }}</td>
         </tr>
-        {% set row = ac.get('month') %}
-        {% set cat_acc = row.ac if row and row.ac is defined else 0 %}
-        {% set mat_acc = row.am if row and row.am is defined else 0 %}
-        <tr>
-          <td style="padding:12px 0;border-bottom:1px solid var(--separator);">month</td>
-          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ pc.get('month', 0) }}</td>
-          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((cat_acc or 0) * 100) }}</td>
-          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((mat_acc or 0) * 100) }}</td>
-        </tr>
         {% set row = ac.get('week') %}
         {% set cat_acc = row.ac if row and row.ac is defined else 0 %}
         {% set mat_acc = row.am if row and row.am is defined else 0 %}
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid var(--separator);">week</td>
           <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ pc.get('week', 0) }}</td>
+          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((cat_acc or 0) * 100) }}</td>
+          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((mat_acc or 0) * 100) }}</td>
+        </tr>
+        {% set row = ac.get('month') %}
+        {% set cat_acc = row.ac if row and row.ac is defined else 0 %}
+        {% set mat_acc = row.am if row and row.am is defined else 0 %}
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid var(--separator);">month</td>
+          <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ pc.get('month', 0) }}</td>
           <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((cat_acc or 0) * 100) }}</td>
           <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((mat_acc or 0) * 100) }}</td>
         </tr>
