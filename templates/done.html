@@ -13,7 +13,36 @@
     {% if phase != 'month' %}
       <p>请保存此码，{{ next_date }} 后凭码返回</p>
     {% endif %}
-    <button class="btn" type="button" onclick="navigator.clipboard.writeText({{ code|tojson }})">复制参与码</button>
+    <button class="btn" type="button" id="copy-btn" onclick="copyCode()">复制参与码</button>
+    <script>
+    function copyCode() {
+      var code = {{ code|tojson }};
+      var btn = document.getElementById('copy-btn');
+      function showResult(ok) {
+        btn.textContent = ok ? '已复制 ✓' : '复制失败，请手动复制';
+        btn.disabled = true;
+        setTimeout(function() { btn.textContent = '复制参与码'; btn.disabled = false; }, 2000);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function() { showResult(true); }).catch(function() { fallback(code, showResult); });
+      } else {
+        fallback(code, showResult);
+      }
+    }
+    function fallback(text, cb) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+      cb(ok);
+    }
+    </script>
     <div class="mt-6">
       <a href="/" class="text-secondary" style="text-decoration:none;">回首页</a>
     </div>
