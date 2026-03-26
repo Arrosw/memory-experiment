@@ -10,7 +10,7 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DB_PATH, MATERIALS, MONTH_WINDOW, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DB_PATH, DEBUG_SKIP_WINDOWS, MATERIALS, MONTH_WINDOW, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
@@ -80,9 +80,9 @@ def get_phase_row(db, participant_id: int):
         if 'immediate' not in done:
             return trial, 'immediate'
         days = (now - parse_ts(trial['study_started_at'])).days
-        if 'week' not in done and WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]:
+        if 'week' not in done and (DEBUG_SKIP_WINDOWS or WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]):
             return trial, 'week'
-        if 'month' not in done and MONTH_WINDOW[0] <= days <= MONTH_WINDOW[1]:
+        if 'month' not in done and (DEBUG_SKIP_WINDOWS or MONTH_WINDOW[0] <= days <= MONTH_WINDOW[1]):
             return trial, 'month'
     return None, None
 
@@ -279,6 +279,19 @@ def admin():
     total = db.execute("SELECT COUNT(*) c FROM participants").fetchone()['c']
     phase_counts = db.execute("SELECT phase, COUNT(*) c FROM responses GROUP BY phase").fetchall()
     accuracy = db.execute("SELECT phase, AVG(category_correct) ac, AVG(material_correct) am FROM responses GROUP BY phase").fetchall()
+    acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in accuracy}
+    chart_data = {
+        'cat': [
+            round(acc_map['immediate']['cat'] * 100, 1) if acc_map.get('immediate', {}).get('cat') is not None else None,
+            round(acc_map['week']['cat'] * 100, 1) if acc_map.get('week', {}).get('cat') is not None else None,
+            round(acc_map['month']['cat'] * 100, 1) if acc_map.get('month', {}).get('cat') is not None else None,
+        ],
+        'mat': [
+            round(acc_map['immediate']['mat'] * 100, 1) if acc_map.get('immediate', {}).get('mat') is not None else None,
+            round(acc_map['week']['mat'] * 100, 1) if acc_map.get('week', {}).get('mat') is not None else None,
+            round(acc_map['month']['mat'] * 100, 1) if acc_map.get('month', {}).get('mat') is not None else None,
+        ],
+    }
     recent = db.execute("SELECT code, nickname, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
     detail_rows = db.execute(
         "SELECT "
@@ -314,7 +327,7 @@ def admin():
             }
 
     stats = {'total_participants': total, 'phase_counts': phase_counts, 'accuracy': accuracy, 'recent': recent}
-    return render_template('admin.html', stats=stats, per_user=per_user)
+    return render_template('admin.html', stats=stats, per_user=per_user, chart_data=chart_data, debug_skip=DEBUG_SKIP_WINDOWS)
 
 
 @app.get('/admin/export.csv')

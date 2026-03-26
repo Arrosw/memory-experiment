@@ -6,6 +6,7 @@ TRIALS_PER_PARTICIPANT = 1
 STUDY_DURATION_SECONDS = 5
 WEEK_WINDOW = (5, 9)
 MONTH_WINDOW = (25, 40)
+DEBUG_SKIP_WINDOWS = False   # 设为 True 可跳过时间窗口，仅用于本地测试
 ADMIN_USER = 'admin'
 ADMIN_PASS = 'memory2026'
 DB_PATH = 'data/experiment.db'
