@@ -5,16 +5,17 @@
 {% block content %}
   <div class="card">
     <h1>找到你记忆中的物品</h1>
-    <p>在坐标区域内拖动蓝点，预览到你记忆中的图像时点击「确认选择」</p>
+    <p>分别拖动 X 轴和 Y 轴上的蓝点，找到你记忆中的图像，然后确认</p>
   </div>
 
-  <div id="grid-canvas">
-    <div id="grid-dot"></div>
-  </div>
-
-  <div class="card" style="margin-top:var(--s4);min-height:96px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-    <img id="preview-img" alt="" style="max-width:100%;max-height:220px;border-radius:var(--r-sm);display:none;">
-    <span id="preview-hint" style="color:var(--text-tertiary);font-size:15px;">在上方拖动蓝点预览图像</span>
+  <div id="coord-wrap">
+    <div id="y-rail"><div id="y-dot"></div></div>
+    <div id="main-col">
+      <div id="quadrant">
+        <img id="preview-img" alt="">
+      </div>
+      <div id="x-rail"><div id="x-dot"></div></div>
+    </div>
   </div>
 
   <button id="confirm-btn" class="btn" style="width:100%;margin-top:var(--s4);" disabled>确认选择</button>
