@@ -110,4 +110,36 @@
       管理地址：<code>/admin</code>，用户名 <code>admin</code>，密码见 <code>config.py</code> 中 <code>ADMIN_PASS</code>
     </p>
   </div>
+
+  <div class="card">
+    <h2>每位参与者明细</h2>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:960px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">昵称</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">物体</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">即时（时长/类别/材质）</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一周（时长/类别/材质）</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一月（时长/类别/材质）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in per_user %}
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);font-family:ui-monospace,monospace;">{{ row.code }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.nickname or '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.category }} {{ row.material }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.immediate.elapsed_label or '—' }} / {{ '✓' if row.immediate.cat_ok == 1 else '✗' if row.immediate.cat_ok == 0 else '—' }} / {{ '✓' if row.immediate.mat_ok == 1 else '✗' if row.immediate.mat_ok == 0 else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.week.elapsed_label or '—' }} / {{ '✓' if row.week.cat_ok == 1 else '✗' if row.week.cat_ok == 0 else '—' }} / {{ '✓' if row.week.mat_ok == 1 else '✗' if row.week.mat_ok == 0 else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.month.elapsed_label or '—' }} / {{ '✓' if row.month.cat_ok == 1 else '✗' if row.month.cat_ok == 0 else '—' }} / {{ '✓' if row.month.mat_ok == 1 else '✗' if row.month.mat_ok == 0 else '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 {% endblock %}

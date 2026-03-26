@@ -260,12 +260,61 @@ def admin():
     if not admin_ok():
         return admin_fail()
     db = get_db()
+
+    def elapsed_label(elapsed_seconds):
+        if elapsed_seconds is None:
+            return '—'
+        if elapsed_seconds < 60:
+            return '<1分钟'
+        if elapsed_seconds < 86400:
+            return '<1天'
+        if elapsed_seconds < 7 * 86400:
+            return '<1周'
+        if elapsed_seconds < 14 * 86400:
+            return '<2周'
+        if elapsed_seconds < 30 * 86400:
+            return '<1月'
+        return '>1月'
+
     total = db.execute("SELECT COUNT(*) c FROM participants").fetchone()['c']
     phase_counts = db.execute("SELECT phase, COUNT(*) c FROM responses GROUP BY phase").fetchall()
     accuracy = db.execute("SELECT phase, AVG(category_correct) ac, AVG(material_correct) am FROM responses GROUP BY phase").fetchall()
     recent = db.execute("SELECT code, nickname, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
+    detail_rows = db.execute(
+        "SELECT "
+        "p.code, p.nickname, t.id trial_id, t.category, t.material, r.phase, "
+        "CAST((julianday(r.responded_at) - julianday(t.study_started_at)) * 86400 AS INTEGER) AS elapsed_seconds, "
+        "r.category_correct, r.material_correct "
+        "FROM participants p "
+        "JOIN trials t ON t.participant_id = p.id "
+        "LEFT JOIN responses r ON r.trial_id = t.id "
+        "ORDER BY p.created_at DESC, p.id DESC, t.trial_order ASC, t.id ASC, r.responded_at ASC, r.id ASC"
+    ).fetchall()
+
+    per_user = []
+    row_map = {}
+    for row in detail_rows:
+        key = (row['code'], row['trial_id'])
+        if key not in row_map:
+            row_map[key] = {
+                'code': row['code'],
+                'nickname': row['nickname'],
+                'category': row['category'],
+                'material': row['material'],
+                'immediate': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
+                'week': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
+                'month': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
+            }
+            per_user.append(row_map[key])
+        if row['phase'] in PHASES:
+            row_map[key][row['phase']] = {
+                'elapsed_label': elapsed_label(row['elapsed_seconds']),
+                'cat_ok': row['category_correct'],
+                'mat_ok': row['material_correct'],
+            }
+
     stats = {'total_participants': total, 'phase_counts': phase_counts, 'accuracy': accuracy, 'recent': recent}
-    return render_template('admin.html', stats=stats)
+    return render_template('admin.html', stats=stats, per_user=per_user)
 
 
 @app.get('/admin/export.csv')
