@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}记忆研究{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h1>记忆研究</h1>
+    <p>你将看到一张物品图像，之后凭记忆找到它</p>
+  </div>
+
+  <div class="card">
+    <form method="post" action="/register">
+      <input class="input" type="text" name="nickname" placeholder="昵称（可选）" autocomplete="nickname">
+      <button class="btn mt-4" type="submit" style="width:100%;">开始实验</button>
+    </form>
+
+    <p class="text-center text-secondary mt-6" style="margin-bottom:var(--s6);">─── 或 ───</p>
+
+    <form id="return-form">
+      <input class="input" type="text" name="code" placeholder="输入你的参与码，如 Tiger_42" autocomplete="off" required>
+      <button class="btn mt-4" type="submit" style="width:100%;">继续实验</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('return-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const code = this.code.value.trim();
+      if (!code) {
+        return;
+      }
+      window.location.href = '/return/' + encodeURIComponent(code);
+    });
+  </script>
+{% endblock %}

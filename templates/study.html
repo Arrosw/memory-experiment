@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}请记住这个物品{% endblock %}
+
+{% block content %}
+  <div class="card text-center">
+    <h1>请记住这个物品</h1>
+    <img src="{{ image_url }}" alt="学习图像" style="width:100%; border-radius:var(--r-md); margin-bottom:var(--s6);">
+
+    <svg id="svg-timer" width="64" height="64" viewBox="0 0 64 64" style="display:block;margin:0 auto var(--s6)">
+      <circle cx="32" cy="32" r="28" fill="none" stroke="var(--gray-5)" stroke-width="4"/>
+      <circle id="ring" cx="32" cy="32" r="28" fill="none" stroke="var(--blue)" stroke-width="4"
+              stroke-dasharray="176" stroke-dashoffset="0"
+              style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1s linear;"/>
+      <text id="num" x="32" y="32" text-anchor="middle" dominant-baseline="central"
+            font-size="24" font-weight="600" fill="var(--text-primary)">{{ duration }}</text>
+    </svg>
+
+    <p>你的参与码：<strong>{{ code }}</strong></p>
+  </div>
+
+  <script>
+    window.addEventListener('load', async function () {
+      const duration = {{ duration|int }};
+      const circumference = 176;
+      const step = circumference / duration;
+      const ring = document.getElementById('ring');
+      const num = document.getElementById('num');
+
+      try {
+        await fetch('/api/study-start', { method: 'POST' });
+      } catch (error) {
+        console.error('study-start failed', error);
+      }
+
+      let remaining = duration;
+      let elapsed = 0;
+
+      const timer = setInterval(async function () {
+        remaining -= 1;
+        elapsed += 1;
+        ring.style.strokeDashoffset = String(step * elapsed);
+        num.textContent = String(Math.max(remaining, 0));
+
+        if (remaining <= 0) {
+          clearInterval(timer);
+          try {
+            const response = await fetch('/api/study-done', { method: 'POST' });
+            const data = await response.json();
+            window.location.href = data.next_url;
+          } catch (error) {
+            console.error('study-done failed', error);
+          }
+        }
+      }, 1000);
+    });
+  </script>
+{% endblock %}

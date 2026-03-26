@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}本阶段已完成{% endblock %}
+
+{% block content %}
+  <div class="card text-center">
+    <div style="font-size:64px;text-align:center;margin-bottom:var(--s6);">✓</div>
+    <h1>本阶段已完成</h1>
+    <p>你的参与码：</p>
+    <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size:20px;padding:14px 16px;border:1px solid var(--separator);border-radius:var(--r-sm);background:var(--bg);margin-bottom:var(--s4);user-select:all;">
+      {{ code }}
+    </div>
+    {% if phase != 'month' %}
+      <p>请保存此码，{{ next_date }} 后凭码返回</p>
+    {% endif %}
+    <button class="btn" type="button" onclick="navigator.clipboard.writeText({{ code|tojson }})">复制参与码</button>
+    <div class="mt-6">
+      <a href="/" class="text-secondary" style="text-decoration:none;">回首页</a>
+    </div>
+  </div>
+{% endblock %}

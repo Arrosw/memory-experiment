@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Memory Research{% endblock %}</title>
+  <style>
+    :root {
+        --blue: #007AFF; --blue-hover: #0071E3;
+        --bg: #F2F2F7; --card: #FFFFFF;
+        --text-primary: #000000;
+        --text-secondary: rgba(60,60,67,0.6);
+        --text-tertiary: rgba(60,60,67,0.3);
+        --separator: rgba(60,60,67,0.12);
+        --gray-5: #E5E5EA; --green: #34C759; --red: #FF3B30;
+        --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px;
+        --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:9999px;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 14px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+        --ease: cubic-bezier(0.25,0.1,0.25,1.0);
+        --dur-fast: 150ms; --dur-normal: 250ms;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex; justify-content: center; align-items: flex-start;
+        padding: var(--s8) var(--s4);
+    }
+    .container { max-width: 480px; width: 100%; }
+    .card { background: var(--card); border-radius: var(--r-md); padding: var(--s6); box-shadow: var(--shadow-sm); margin-bottom: var(--s4); }
+    h1 { font-size: 28px; font-weight: 700; letter-spacing: 0.36px; margin-bottom: var(--s4); }
+    h2 { font-size: 22px; font-weight: 700; letter-spacing: 0.35px; margin-bottom: var(--s3); }
+    p { font-size: 17px; line-height: 1.5; color: var(--text-secondary); margin-bottom: var(--s4); }
+    .btn { display: inline-block; padding: 12px 32px; background: var(--blue); color: #fff; border: none; border-radius: var(--r-pill); font-size: 17px; font-weight: 400; cursor: pointer; text-decoration: none; text-align: center; transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+    .btn:hover { background: var(--blue-hover); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { background: var(--gray-5); color: var(--text-tertiary); cursor: not-allowed; }
+    .input { width: 100%; padding: 12px 14px; font-size: 17px; border: 1px solid var(--gray-5); border-radius: var(--r-sm); outline: none; transition: border-color var(--dur-fast) var(--ease); }
+    .input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,122,255,0.15); }
+    .text-center { text-align: center; }
+    .text-secondary { color: var(--text-secondary); }
+    .mt-4 { margin-top: var(--s4); }
+    .mt-6 { margin-top: var(--s6); }
+    .grid-cell { aspect-ratio:1; border-radius:var(--r-sm); background-color:var(--gray-5); background-size:cover; background-position:center; cursor:pointer; transition:transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+    .grid-cell:hover { transform:scale(1.03); box-shadow:var(--shadow-sm); }
+    .grid-cell.active { transform:scale(1.06); box-shadow:0 0 0 2px var(--blue), var(--shadow-md); }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

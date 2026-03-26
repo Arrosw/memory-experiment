@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h1>管理面板</h1>
+    <p>总参与人数：<strong>{{ stats.total_participants }}</strong></p>
+    <p><a href="/admin/export.csv" style="color:var(--blue);text-decoration:none;">导出 CSV</a></p>
+  </div>
+
+  <div class="card">
+    <h2>阶段计数</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">阶段</th>
+          <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stats.phase_counts %}
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.phase }}</td>
+            <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">
+              {% if row.count is defined %}{{ row.count }}{% elif row.c is defined %}{{ row.c }}{% else %}0{% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="2" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>准确率</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">阶段</th>
+          <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">类别准确率</th>
+          <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">材质准确率</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stats.accuracy %}
+          {% set cat_acc = row.category_acc if row.category_acc is defined else (row.cat_acc if row.cat_acc is defined else (row.ac if row.ac is defined else 0)) %}
+          {% set mat_acc = row.material_acc if row.material_acc is defined else (row.mat_acc if row.mat_acc is defined else (row.am if row.am is defined else 0)) %}
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.phase }}</td>
+            <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((cat_acc or 0) * 100) }}</td>
+            <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format((mat_acc or 0) * 100) }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>最近参与者</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">昵称</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">创建时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stats.recent %}
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">{{ row.code }}</td>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.nickname or '—' }}</td>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.created_at }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

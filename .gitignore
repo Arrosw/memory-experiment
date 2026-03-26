@@ -1,0 +1,7 @@
+data/
+static/images/
+__pycache__/
+*.pyc
+.env
+*.db
+.DS_Store
