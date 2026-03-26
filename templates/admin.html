@@ -2,10 +2,6 @@
 
 {% block title %}Admin{% endblock %}
 
-{% block head %}
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-{% endblock %}
-
 {% block content %}
   <div class="card">
     <h1>管理面板</h1>
@@ -63,52 +59,6 @@
         {% endfor %}
       </tbody>
     </table>
-    <canvas id="acc-chart" height="200"></canvas>
-    <script>
-      (() => {
-        const canvas = document.getElementById('acc-chart');
-        if (!canvas || typeof Chart === 'undefined') return;
-        const chartData = {{ chart_data | tojson }};
-        new Chart(canvas, {
-          type: 'line',
-          data: {
-            labels: ['即时', '一周', '一月'],
-            datasets: [
-              {
-                label: '类别记忆（低频）',
-                data: chartData.cat,
-                borderColor: '#007AFF',
-                backgroundColor: '#007AFF',
-                spanGaps: false,
-                tension: 0
-              },
-              {
-                label: '材质记忆（高频）',
-                data: chartData.mat,
-                borderColor: '#FF9500',
-                backgroundColor: '#FF9500',
-                spanGaps: false,
-                tension: 0
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                min: 0,
-                max: 100,
-                ticks: {
-                  stepSize: 20,
-                  callback: (value) => `${value}%`
-                }
-              }
-            }
-          }
-        });
-      })();
-    </script>
   </div>
 
   <div class="card">
