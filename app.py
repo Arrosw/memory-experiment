@@ -182,7 +182,13 @@ def recall(phase: str):
     trial, current = get_phase_row(db, pid)
     if not trial or current != phase:
         return redirect(url_for('done'))
-    return render_template('recall.html', phase=phase)
+    x_order = list(range(len(MATERIALS)))
+    y_order = list(range(len(CATEGORIES)))
+    random.shuffle(x_order)
+    random.shuffle(y_order)
+    session['recall_x_order'] = x_order
+    session['recall_y_order'] = y_order
+    return render_template('recall.html', phase=phase, x_order=x_order, y_order=y_order)
 
 
 @app.post('/api/recall/<phase>')
@@ -195,10 +201,15 @@ def save_recall(phase: str):
     if not trial or current != phase:
         return jsonify({'next_url': url_for('done')})
     data = request.get_json(silent=True) or {}
-    col, row = data.get('col'), data.get('row')
-    if col not in range(6) or row not in range(6):
+    xi, yi = data.get('x'), data.get('y')
+    if xi not in range(6) or yi not in range(6):
         return jsonify({'next_url': url_for('recall', phase=phase)}), 400
-    resp_category, resp_material = CATEGORIES[row], MATERIALS[col]
+    x_order = session.get('recall_x_order', list(range(6)))
+    y_order = session.get('recall_y_order', list(range(6)))
+    col = x_order[xi]   # actual MATERIALS index
+    row = y_order[yi]   # actual CATEGORIES index
+    resp_material = MATERIALS[col]
+    resp_category = CATEGORIES[row]
     db.execute(
         "INSERT INTO responses (trial_id, phase, resp_category, resp_material, resp_col, resp_row, category_correct, material_correct, response_time_ms) VALUES (?,?,?,?,?,?,?,?,?)",
         (trial['id'], phase, resp_category, resp_material, col, row, int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))

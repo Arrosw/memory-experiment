@@ -5,16 +5,24 @@
 {% block content %}
   <div class="card">
     <h1>找到你记忆中的物品</h1>
-    <p>点击你认为是原始图像的格子</p>
+    <p>在坐标区域内拖动蓝点，预览到你记忆中的图像时点击「确认选择」</p>
   </div>
 
-  <div id="grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:var(--s6);"></div>
-
-  <div class="card" style="margin-bottom:var(--s6);min-height:120px;display:flex;align-items:center;justify-content:center;">
-    <img id="preview-img" alt="预览图像" style="max-width:100%;max-height:240px;border-radius:var(--r-sm);display:none;">
+  <div id="grid-canvas">
+    <div id="grid-dot"></div>
   </div>
 
-  <button id="confirm-btn" class="btn" style="width:100%" disabled>确认选择</button>
-  <div id="phase-data" data-phase="{{ phase }}" style="display:none"></div>
+  <div class="card" style="margin-top:var(--s4);min-height:96px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+    <img id="preview-img" alt="" style="max-width:100%;max-height:220px;border-radius:var(--r-sm);display:none;">
+    <span id="preview-hint" style="color:var(--text-tertiary);font-size:15px;">在上方拖动蓝点预览图像</span>
+  </div>
+
+  <button id="confirm-btn" class="btn" style="width:100%;margin-top:var(--s4);" disabled>确认选择</button>
+
+  <div id="phase-data"
+       data-phase="{{ phase }}"
+       data-x-order="{{ x_order | tojson }}"
+       data-y-order="{{ y_order | tojson }}"
+       style="display:none"></div>
   <script src="/static/grid.js"></script>
 {% endblock %}

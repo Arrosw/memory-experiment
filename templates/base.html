@@ -46,9 +46,27 @@
     .text-secondary { color: var(--text-secondary); }
     .mt-4 { margin-top: var(--s4); }
     .mt-6 { margin-top: var(--s6); }
-    .grid-cell { aspect-ratio:1; border-radius:var(--r-sm); background-color:var(--gray-5); background-size:cover; background-position:center; cursor:pointer; transition:transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
-    .grid-cell:hover { transform:scale(1.03); box-shadow:var(--shadow-sm); }
-    .grid-cell.active { transform:scale(1.06); box-shadow:0 0 0 2px var(--blue), var(--shadow-md); }
+    #grid-canvas {
+      width:100%; aspect-ratio:1; position:relative;
+      background: var(--card);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-sm);
+      cursor: crosshair;
+      touch-action: none;
+      background-image:
+        repeating-linear-gradient(to right,  transparent 0, transparent calc(100%/6 - 1px), var(--separator) calc(100%/6 - 1px), var(--separator) calc(100%/6)),
+        repeating-linear-gradient(to bottom, transparent 0, transparent calc(100%/6 - 1px), var(--separator) calc(100%/6 - 1px), var(--separator) calc(100%/6));
+    }
+    #grid-dot {
+      position:absolute; width:32px; height:32px;
+      background: var(--blue);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      pointer-events:none;
+      display:none;
+      box-shadow:0 2px 8px rgba(0,122,255,0.4);
+      transition: left 60ms ease, top 60ms ease;
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
