@@ -3,9 +3,11 @@
 {% block title %}找到你记忆中的物品{% endblock %}
 
 {% block content %}
-  <div class="card">
-    <h1>找到你记忆中的物品</h1>
-    <p style="margin-bottom:var(--s4);">分别拖动 X 轴和 Y 轴上的蓝点，找到你记忆中的图像，然后确认</p>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:var(--s6) var(--s6) var(--s4);">
+      <h1>找到你记忆中的物品</h1>
+      <p>分别拖动 X 轴和 Y 轴上的蓝点，找到你记忆中的图像，然后确认</p>
+    </div>
     <div id="coord-wrap">
       <div id="left-col">
         <div id="y-rail"><div id="y-dot"></div></div>
@@ -18,7 +20,9 @@
         <div id="x-rail"><div id="x-dot"></div></div>
       </div>
     </div>
-    <button id="confirm-btn" class="btn" style="width:100%;margin-top:var(--s4);" disabled>确认选择</button>
+    <div style="padding:var(--s4) var(--s6) var(--s6);">
+      <button id="confirm-btn" class="btn" style="width:100%;" disabled>确认选择</button>
+    </div>
   </div>
 
   <div id="phase-data"
