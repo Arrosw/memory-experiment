@@ -1,11 +1,11 @@
-const CATEGORIES = ["bowl", "cup", "plate", "vase", "box", "pitcher"];
-const MATERIALS  = ["wood", "plastic", "metal", "glass", "ceramic", "stone"];
-const N = 6;
-
 const phaseData = document.getElementById("phase-data");
 const PHASE     = phaseData.dataset.phase;
 const X_ORDER   = JSON.parse(phaseData.dataset.xOrder);
 const Y_ORDER   = JSON.parse(phaseData.dataset.yOrder);
+const AVAIL_MATS = JSON.parse(phaseData.dataset.availMats);
+const AVAIL_CATS = JSON.parse(phaseData.dataset.availCats);
+const NX = X_ORDER.length;
+const NY = Y_ORDER.length;
 
 const yRailEl   = document.getElementById("y-rail");
 const xRailEl   = document.getElementById("x-rail");
@@ -20,17 +20,17 @@ let yIdx = 0;
 const startMs = Date.now();
 
 function getKey(xi, yi) {
-  return `${CATEGORIES[Y_ORDER[yi]]}_${MATERIALS[X_ORDER[xi]]}`;
+  return AVAIL_CATS[Y_ORDER[yi]] + '_' + AVAIL_MATS[X_ORDER[xi]];
 }
 
 // Place X dot as % of x-rail width; transform: translateX(-50%) handles centering
 function placeXDot(xi) {
-  xDotEl.style.left = ((xi + 0.5) / N * 100) + "%";
+  xDotEl.style.left = ((xi + 0.5) / NX * 100) + "%";
 }
 
 // Place Y dot as % of y-rail height; yi=0 → bottom, yi=N-1 → top
 function placeYDot(yi) {
-  yDotEl.style.top = ((N - 1 - yi + 0.5) / N * 100) + "%";
+  yDotEl.style.top = ((NY - 1 - yi + 0.5) / NY * 100) + "%";
 }
 
 function updateImage() {
@@ -43,13 +43,13 @@ function updateImage() {
 }
 
 function setX(xi) {
-  xIdx = Math.max(0, Math.min(N - 1, xi));
+  xIdx = Math.max(0, Math.min(NX - 1, xi));
   placeXDot(xIdx);
   updateImage();
 }
 
 function setY(yi) {
-  yIdx = Math.max(0, Math.min(N - 1, yi));
+  yIdx = Math.max(0, Math.min(NY - 1, yi));
   placeYDot(yIdx);
   updateImage();
 }
@@ -57,14 +57,14 @@ function setY(yi) {
 function xIdxFrom(e) {
   const rect = xRailEl.getBoundingClientRect();
   const src  = e.touches ? e.touches[0] : e;
-  return Math.floor((src.clientX - rect.left) / rect.width * N);
+  return Math.max(0, Math.min(NX - 1, Math.floor((src.clientX - rect.left) / rect.width * NX)));
 }
 
 function yIdxFrom(e) {
   const rect = yRailEl.getBoundingClientRect();
   const src  = e.touches ? e.touches[0] : e;
   // frac=0 → top (yi=N-1), frac=1 → bottom (yi=0)
-  return N - 1 - Math.floor((src.clientY - rect.top) / rect.height * N);
+  return Math.max(0, Math.min(NY - 1, NY - 1 - Math.floor((src.clientY - rect.top) / rect.height * NY)));
 }
 
 // ── X axis interactions ──────────────────────────────────────────────────────

@@ -21,6 +21,34 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24).hex()
 
 
+def scan_available():
+    """Return (avail_cats, avail_mats) — sorted lists with ≥1 image. Falls back to full lists."""
+    images_dir = Path(app.static_folder or 'static') / 'images'
+    combos = set()
+    if images_dir.exists():
+        for cat_dir in images_dir.iterdir():
+            if cat_dir.is_dir() and cat_dir.name in CATEGORIES:
+                for mat_dir in cat_dir.iterdir():
+                    if mat_dir.is_dir() and mat_dir.name in MATERIALS:
+                        imgs = [f for f in mat_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
+                        if imgs:
+                            combos.add((cat_dir.name, mat_dir.name))
+    if not combos:
+        return list(CATEGORIES), list(MATERIALS)
+    cats = sorted({c for c, m in combos}, key=lambda x: CATEGORIES.index(x))
+    mats = sorted({m for c, m in combos}, key=lambda x: MATERIALS.index(x))
+    return cats, mats
+
+
+def get_random_image(category: str, material: str) -> str:
+    img_dir = Path(app.static_folder or 'static') / 'images' / category / material
+    if img_dir.exists():
+        imgs = [f for f in img_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
+        if imgs:
+            return f"/static/images/{category}/{material}/{random.choice(imgs).name}"
+    return url_for('placeholder', cat=category, mat=material)
+
+
 def ensure_db() -> None:
     Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
@@ -55,7 +83,8 @@ def generate_code(db) -> str:
 def assign_trials(db, participant_id: int) -> None:
     counts = db.execute("SELECT category, material, COUNT(*) c FROM trials GROUP BY category, material").fetchall()
     count_map = {(r['category'], r['material']): r['c'] for r in counts}
-    all_combos = [(c, m) for c in CATEGORIES for m in MATERIALS]
+    avail_cats, avail_mats = scan_available()
+    all_combos = [(c, m) for c in avail_cats for m in avail_mats]
     random.shuffle(all_combos)
     all_combos.sort(key=lambda x: count_map.get(x, 0))
     selected = all_combos[:TRIALS_PER_PARTICIPANT]
@@ -150,7 +179,7 @@ def study():
         trial_id, phase = get_current_phase(db, pid)
         return redirect(url_for('recall', phase=phase) if trial_id and phase in PHASES else url_for('done'))
     code = db.execute("SELECT code FROM participants WHERE id=?", (pid,)).fetchone()['code']
-    img_url = image_url(trial['category'], trial['material'], 'immediate')
+    img_url = get_random_image(trial['category'], trial['material'])
     return render_template('study.html', image_url=img_url, duration=STUDY_DURATION_SECONDS, code=code)
 
 
@@ -182,13 +211,17 @@ def recall(phase: str):
     trial, current = get_phase_row(db, pid)
     if not trial or current != phase:
         return redirect(url_for('done'))
-    x_order = list(range(len(MATERIALS)))
-    y_order = list(range(len(CATEGORIES)))
+    avail_cats, avail_mats = scan_available()
+    x_order = list(range(len(avail_mats)))
+    y_order = list(range(len(avail_cats)))
     random.shuffle(x_order)
     random.shuffle(y_order)
     session['recall_x_order'] = x_order
     session['recall_y_order'] = y_order
-    return render_template('recall.html', phase=phase, x_order=x_order, y_order=y_order)
+    session['recall_avail_cats'] = avail_cats
+    session['recall_avail_mats'] = avail_mats
+    return render_template('recall.html', phase=phase, x_order=x_order, y_order=y_order,
+                           avail_cats=avail_cats, avail_mats=avail_mats)
 
 
 @app.post('/api/recall/<phase>')
@@ -202,17 +235,17 @@ def save_recall(phase: str):
         return jsonify({'next_url': url_for('done')})
     data = request.get_json(silent=True) or {}
     xi, yi = data.get('x'), data.get('y')
-    if xi not in range(6) or yi not in range(6):
+    avail_cats = session.get('recall_avail_cats', list(CATEGORIES))
+    avail_mats = session.get('recall_avail_mats', list(MATERIALS))
+    x_order = session.get('recall_x_order', list(range(len(avail_mats))))
+    y_order = session.get('recall_y_order', list(range(len(avail_cats))))
+    if xi not in range(len(avail_mats)) or yi not in range(len(avail_cats)):
         return jsonify({'next_url': url_for('recall', phase=phase)}), 400
-    x_order = session.get('recall_x_order', list(range(6)))
-    y_order = session.get('recall_y_order', list(range(6)))
-    col = x_order[xi]   # actual MATERIALS index
-    row = y_order[yi]   # actual CATEGORIES index
-    resp_material = MATERIALS[col]
-    resp_category = CATEGORIES[row]
+    resp_material = avail_mats[x_order[xi]]
+    resp_category = avail_cats[y_order[yi]]
     db.execute(
         "INSERT INTO responses (trial_id, phase, resp_category, resp_material, resp_col, resp_row, category_correct, material_correct, response_time_ms) VALUES (?,?,?,?,?,?,?,?,?)",
-        (trial['id'], phase, resp_category, resp_material, col, row, int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))
+        (trial['id'], phase, resp_category, resp_material, x_order[xi], y_order[yi], int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))
     )
     db.commit()
     return jsonify({'next_url': url_for('done', phase=phase)})
@@ -348,11 +381,11 @@ def export_csv():
 
 @app.get('/api/thumbs')
 def thumbs():
+    avail_cats, avail_mats = scan_available()
     data = {}
-    for category in CATEGORIES:
-        for material in MATERIALS:
-            path = Path(app.static_folder or 'static') / 'images' / category / material / 'thumb.png'
-            data[f'{category}_{material}'] = f"/static/images/{category}/{material}/thumb.png" if path.exists() else url_for('placeholder', cat=category, mat=material)
+    for category in avail_cats:
+        for material in avail_mats:
+            data[f'{category}_{material}'] = get_random_image(category, material)
     return jsonify(data)
 
 
