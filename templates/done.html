@@ -5,13 +5,22 @@
 {% block content %}
   <div class="card text-center">
     <div style="font-size:64px;text-align:center;margin-bottom:var(--s6);">✓</div>
-    <h1>本阶段已完成</h1>
-    <p>你的参与码：</p>
+    <h1>感谢您！本阶段已完成</h1>
+    <div style="display:flex;justify-content:center;gap:var(--s8);margin-bottom:var(--s5);">
+      {% for p in progress %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:{{ 'var(--blue)' if p.done else 'var(--gray-5)' }};"></div>
+        <div style="font-size:13px;color:{{ 'var(--blue)' if p.done else 'var(--text-secondary)' }};font-weight:{{ '600' if p.done else '400' }};">{{ p.label }}</div>
+        {% if p.note %}<div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;">{{ p.note }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <p>您的参与码：</p>
     <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size:20px;padding:14px 16px;border:1px solid var(--separator);border-radius:var(--r-sm);background:var(--bg);margin-bottom:var(--s4);user-select:all;">
       {{ code }}
     </div>
     {% if phase != 'month' %}
-      <p>请保存此码，{{ next_date }} 后凭码返回</p>
+      <p>请保存此码，凭码返回进行后续测试</p>
     {% endif %}
     <button class="btn" type="button" id="copy-btn" onclick="copyCode()">复制参与码</button>
     <script>

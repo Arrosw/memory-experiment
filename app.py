@@ -3,7 +3,7 @@ import csv
 import os
 import random
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from io import BytesIO, StringIO
 from pathlib import Path
 
@@ -111,7 +111,7 @@ def get_phase_row(db, participant_id: int):
         days = (now - parse_ts(trial['study_started_at'])).days
         if 'week' not in done and (DEBUG_SKIP_WINDOWS or WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]):
             return trial, 'week'
-        if 'month' not in done and (DEBUG_SKIP_WINDOWS or MONTH_WINDOW[0] <= days <= MONTH_WINDOW[1]):
+        if 'month' not in done and (DEBUG_SKIP_WINDOWS or days >= MONTH_WINDOW[0]):
             return trial, 'month'
     return None, None
 
@@ -256,24 +256,37 @@ def done():
     pid = participant_id()
     code = ''
     phase = request.args.get('phase', 'immediate')
-    next_date = ''
+    progress = [
+        {'key': 'immediate', 'label': '即时', 'done': False, 'note': ''},
+        {'key': 'week',      'label': '一周',  'done': False, 'note': ''},
+        {'key': 'month',     'label': '一月',  'done': False, 'note': ''},
+    ]
     if pid:
         db = get_db()
         row = db.execute("SELECT code FROM participants WHERE id=?", (pid,)).fetchone()
         code = row['code'] if row else ''
         trial_row = db.execute(
-            "SELECT study_started_at FROM trials WHERE participant_id=? ORDER BY id LIMIT 1", (pid,)
+            "SELECT id, study_started_at FROM trials WHERE participant_id=? ORDER BY id LIMIT 1", (pid,)
         ).fetchone()
-        if trial_row and trial_row['study_started_at']:
-            started = parse_ts(trial_row['study_started_at'])
-            from datetime import timedelta
-            if phase == 'immediate':
-                target = started + timedelta(days=WEEK_WINDOW[0])
-                next_date = f"约{target.month}月{target.day}日"
-            elif phase == 'week':
-                target = started + timedelta(days=MONTH_WINDOW[0])
-                next_date = f"约{target.month}月{target.day}日"
-    return render_template('done.html', code=code, next_date=next_date, phase=phase)
+        if trial_row:
+            phases_done = {r['phase'] for r in db.execute(
+                "SELECT phase FROM responses WHERE trial_id=?", (trial_row['id'],)
+            ).fetchall()}
+            for p in progress:
+                p['done'] = p['key'] in phases_done
+            if trial_row['study_started_at']:
+                started = parse_ts(trial_row['study_started_at'])
+                today = datetime.now(timezone.utc).date()
+                for key, offset in [('week', WEEK_WINDOW[0]), ('month', MONTH_WINDOW[0])]:
+                    entry = next(x for x in progress if x['key'] == key)
+                    if not entry['done']:
+                        target = (started + timedelta(days=offset)).date()
+                        days_left = (target - today).days
+                        if days_left > 0:
+                            entry['note'] = f"{days_left}天后（{target.month}月{target.day}日）"
+                        else:
+                            entry['note'] = f"{target.month}月{target.day}日（可返回）"
+    return render_template('done.html', code=code, phase=phase, progress=progress)
 
 
 @app.get('/return/<code>')
