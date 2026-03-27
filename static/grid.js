@@ -91,13 +91,18 @@ document.addEventListener("mouseup", () => { dX = false; dY = false; });
 // ── Submit ───────────────────────────────────────────────────────────────────
 confirmEl.addEventListener("click", async () => {
   confirmEl.disabled = true;
-  const resp = await fetch(`/api/recall/${PHASE}`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ x: xIdx, y: yIdx, response_time_ms: Date.now() - startMs }),
-  });
-  const data = await resp.json();
-  if (data.next_url) window.location.href = data.next_url;
+  try {
+    const resp = await fetch(`/api/recall/${PHASE}`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ x: xIdx, y: yIdx, response_time_ms: Date.now() - startMs }),
+    });
+    const data = await resp.json();
+    if (data.next_url) window.location.href = data.next_url;
+  } catch (_) {
+    confirmEl.disabled = false;
+    alert("网络异常，请重试");
+  }
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ MATERIAL_COLORS = {
 }
 PHASES = {'immediate', 'week', 'month'}
 app = Flask(__name__)
-app.secret_key = os.urandom(24).hex()
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
 
 
 def scan_available():
@@ -162,6 +162,7 @@ def register():
     db = get_db()
     code = generate_code(db)
     db.execute("INSERT INTO participants (code, nickname) VALUES (?,?)", (code, request.form.get('nickname', '').strip() or None))
+    db.commit()
     participant_id = db.execute("SELECT id FROM participants WHERE code=?", (code,)).fetchone()['id']
     assign_trials(db, participant_id)
     session['participant_id'] = participant_id

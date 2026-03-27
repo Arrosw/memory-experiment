@@ -5,8 +5,8 @@ from diffusers import FluxPipeline
 import torch
 
 
-CATEGORIES = ["bowl", "cup", "plate", "vase", "box", "pitcher"]
-MATERIALS = ["wood", "plastic", "metal", "glass", "ceramic", "stone"]
+CATEGORIES = ["bowl", "mug", "pitcher", "tray", "vase"]
+MATERIALS = ["wood", "metal", "glass", "ceramic", "stone"]
 SEEDS = [42, 137, 256, 512, 999]
 
 PROMPT_TEMPLATE = (
