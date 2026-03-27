@@ -1,12 +1,12 @@
-CATEGORIES = ['bowl', 'cup', 'plate', 'vase', 'box', 'pitcher']
-MATERIALS = ['wood', 'plastic', 'metal', 'glass', 'ceramic', 'stone']
+CATEGORIES = ['bowl', 'mug', 'pitcher', 'tray', 'vase']
+MATERIALS = ['wood', 'metal', 'glass', 'ceramic', 'stone']
 ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'Deer', 'Lynx',
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1
 STUDY_DURATION_SECONDS = 5
 WEEK_WINDOW = (5, 9)
 MONTH_WINDOW = (25, 40)
-DEBUG_SKIP_WINDOWS = False   # 设为 True 可跳过时间窗口，仅用于本地测试
+DEBUG_SKIP_WINDOWS = False  # 设为 True 可跳过时间窗口，仅用于本地测试
 ADMIN_USER = 'admin'
 ADMIN_PASS = 'memory2026'
 DB_PATH = 'data/experiment.db'
