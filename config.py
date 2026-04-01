@@ -1,5 +1,5 @@
 CATEGORIES = ['bowl', 'mug', 'pitcher', 'tray', 'vase']
-MATERIALS = ['wood', 'metal', 'glass', 'ceramic', 'stone']
+MATERIALS = ['wood', 'stone', 'ceramic', 'metal', 'glass']
 ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'Deer', 'Lynx',
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1

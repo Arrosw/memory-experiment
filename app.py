@@ -215,7 +215,6 @@ def recall(phase: str):
     avail_cats, avail_mats = scan_available()
     x_order = list(range(len(avail_mats)))
     y_order = list(range(len(avail_cats)))
-    random.shuffle(x_order)
     random.shuffle(y_order)
     session['recall_x_order'] = x_order
     session['recall_y_order'] = y_order
