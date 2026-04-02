@@ -409,9 +409,9 @@ def thumbs():
                 box = draw.multiline_textbbox((0, 0), text, font=font, align='center')
                 pos = ((512 - (box[2] - box[0])) / 2, (512 - (box[3] - box[1])) / 2)
                 draw.multiline_text(pos, text, fill='#1f2933', font=font, align='center', spacing=10)
-            img = img.resize((192, 192), Image.LANCZOS)
+            img = img.resize((300, 300), Image.LANCZOS)
             buf = BytesIO()
-            img.save(buf, format='JPEG', quality=70)
+            img.save(buf, format='JPEG', quality=65)
             data[f'{category}_{material}'] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
     return jsonify(data)
 
