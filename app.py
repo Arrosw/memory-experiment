@@ -398,7 +398,21 @@ def thumbs():
     data = {}
     for category in avail_cats:
         for material in avail_mats:
-            data[f'{category}_{material}'] = get_random_image(category, material)
+            image_dir = Path(app.static_folder or 'static') / 'images' / category / material
+            files = [p for p in image_dir.iterdir() if p.is_file() and p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'}] if image_dir.exists() else []
+            if files:
+                img = Image.open(random.choice(files)).convert('RGB')
+            else:
+                img = Image.new('RGB', (512, 512), MATERIAL_COLORS[material])
+                draw, font = ImageDraw.Draw(img), load_font()
+                text = f"{material}\n{category}"
+                box = draw.multiline_textbbox((0, 0), text, font=font, align='center')
+                pos = ((512 - (box[2] - box[0])) / 2, (512 - (box[3] - box[1])) / 2)
+                draw.multiline_text(pos, text, fill='#1f2933', font=font, align='center', spacing=10)
+            img = img.resize((256, 256), Image.LANCZOS)
+            buf = BytesIO()
+            img.save(buf, format='JPEG', quality=80)
+            data[f'{category}_{material}'] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
     return jsonify(data)
 
 
