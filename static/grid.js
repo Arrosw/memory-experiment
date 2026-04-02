@@ -26,12 +26,12 @@ function getKey(xi, yi) {
 
 // Place X dot as % of x-rail width; transform: translateX(-50%) handles centering
 function placeXDot(xp) {
-  xDotEl.style.left = (xp / (NX - 1) * 100) + "%";
+  xDotEl.style.left = ((xp + 1) / (NX + 1) * 100) + "%";
 }
 
 // Place Y dot as % of y-rail height; yi=0 → bottom, yi=N-1 → top
 function placeYDot(yi) {
-  yDotEl.style.top = ((NY - 1 - yi + 0.5) / NY * 100) + "%";
+  yDotEl.style.top = ((NY - yi) / (NY + 1) * 100) + "%";
 }
 
 function updateImage(xp) {
@@ -65,13 +65,13 @@ function addTicks() {
   for (let i = 0; i < NX; i++) {
     const el = document.createElement('div');
     el.className = 'x-tick';
-    el.style.left = (i / (NX - 1) * 100) + '%';
+    el.style.left = ((i + 1) / (NX + 1) * 100) + '%';
     xRailEl.appendChild(el);
   }
   for (let i = 0; i < NY; i++) {
     const el = document.createElement('div');
     el.className = 'y-tick';
-    el.style.top = ((NY - 1 - i + 0.5) / NY * 100) + '%';
+    el.style.top = ((NY - i) / (NY + 1) * 100) + '%';
     yRailEl.appendChild(el);
   }
 }
@@ -85,14 +85,14 @@ function setY(yi) {
 function xPosFrom(e) {
   const rect = xRailEl.getBoundingClientRect();
   const src  = e.touches ? e.touches[0] : e;
-  return Math.max(0, Math.min(NX - 1, (src.clientX - rect.left) / rect.width * (NX - 1)));
+  return Math.max(0, Math.min(NX - 1, (src.clientX - rect.left) / rect.width * (NX + 1) - 1));
 }
 
 function yIdxFrom(e) {
   const rect = yRailEl.getBoundingClientRect();
   const src  = e.touches ? e.touches[0] : e;
   // frac=0 → top (yi=N-1), frac=1 → bottom (yi=0)
-  return Math.max(0, Math.min(NY - 1, NY - 1 - Math.floor((src.clientY - rect.top) / rect.height * NY)));
+  return Math.max(0, Math.min(NY - 1, Math.round(NY - (src.clientY - rect.top) / rect.height * (NY + 1))));
 }
 
 // ── X axis interactions ──────────────────────────────────────────────────────
