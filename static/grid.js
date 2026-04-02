@@ -61,6 +61,21 @@ function snapX() {
   updateImage(xPos);
 }
 
+function addTicks() {
+  for (let i = 0; i < NX; i++) {
+    const el = document.createElement('div');
+    el.className = 'x-tick';
+    el.style.left = (i / (NX - 1) * 100) + '%';
+    xRailEl.appendChild(el);
+  }
+  for (let i = 0; i < NY; i++) {
+    const el = document.createElement('div');
+    el.className = 'y-tick';
+    el.style.top = ((NY - 1 - i + 0.5) / NY * 100) + '%';
+    yRailEl.appendChild(el);
+  }
+}
+
 function setY(yi) {
   yIdx = Math.max(0, Math.min(NY - 1, yi));
   placeYDot(yIdx);
@@ -129,6 +144,7 @@ async function init() {
   thumbMap = await resp.json();
   // Preload all thumbnails so crossfade is instant
   Object.values(thumbMap).forEach(src => { const img = new Image(); img.src = src; });
+  addTicks();
   placeXDot(xPos);
   placeYDot(yIdx);
   updateImage(xPos);
