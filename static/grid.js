@@ -82,7 +82,7 @@ function yIdxFrom(e) {
 
 // ── X axis interactions ──────────────────────────────────────────────────────
 let dX = false;
-xRailEl.addEventListener("mousedown",  (e) => { dX = true; setX(xPosFrom(e)); });
+xRailEl.addEventListener("mousedown",  (e) => { e.preventDefault(); dX = true; setX(xPosFrom(e)); });
 xRailEl.addEventListener("touchstart", (e) => setX(xPosFrom(e)), { passive: true });
 xRailEl.addEventListener("touchmove",  (e) => { e.preventDefault(); setX(xPosFrom(e)); }, { passive: false });
 xDotEl .addEventListener("touchmove",  (e) => { e.preventDefault(); setX(xPosFrom(e)); }, { passive: false });
@@ -91,7 +91,7 @@ xDotEl .addEventListener("touchend",   () => snapX(), { passive: true });
 
 // ── Y axis interactions ──────────────────────────────────────────────────────
 let dY = false;
-yRailEl.addEventListener("mousedown",  (e) => { dY = true; setY(yIdxFrom(e)); });
+yRailEl.addEventListener("mousedown",  (e) => { e.preventDefault(); dY = true; setY(yIdxFrom(e)); });
 yRailEl.addEventListener("touchstart", (e) => setY(yIdxFrom(e)), { passive: true });
 yRailEl.addEventListener("touchmove",  (e) => { e.preventDefault(); setY(yIdxFrom(e)); }, { passive: false });
 yDotEl .addEventListener("touchmove",  (e) => { e.preventDefault(); setY(yIdxFrom(e)); }, { passive: false });
@@ -127,6 +127,8 @@ confirmEl.addEventListener("click", async () => {
 async function init() {
   const resp = await fetch("/api/thumbs");
   thumbMap = await resp.json();
+  // Preload all thumbnails so crossfade is instant
+  Object.values(thumbMap).forEach(src => { const img = new Image(); img.src = src; });
   placeXDot(xPos);
   placeYDot(yIdx);
   updateImage(xPos);
