@@ -515,11 +515,13 @@ def thumbs():
                 box = draw.multiline_textbbox((0, 0), text, font=font, align='center')
                 pos = ((512 - (box[2] - box[0])) / 2, (512 - (box[3] - box[1])) / 2)
                 draw.multiline_text(pos, text, fill='#1f2933', font=font, align='center', spacing=10)
-            img = img.resize((300, 300), Image.LANCZOS)
+            img = img.resize((180, 180), Image.LANCZOS)
             buf = BytesIO()
-            img.save(buf, format='JPEG', quality=65)
+            img.save(buf, format='JPEG', quality=40)
             data[f'{category}_{material}'] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
-    return jsonify(data)
+    resp = jsonify(data)
+    resp.headers['Cache-Control'] = 'max-age=3600'
+    return resp
 
 
 @app.get('/api/thumbs-dog')
@@ -533,11 +535,13 @@ def thumbs_dog():
             key = f'{breed}_{bg}'
             if files:
                 img = Image.open(random.choice(files)).convert('RGB')
-                img = img.resize((300, 300), Image.LANCZOS)
+                img = img.resize((180, 180), Image.LANCZOS)
                 buf = BytesIO()
-                img.save(buf, format='JPEG', quality=65)
+                img.save(buf, format='JPEG', quality=40)
                 data[key] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
-    return jsonify(data)
+    resp = jsonify(data)
+    resp.headers['Cache-Control'] = 'max-age=3600'
+    return resp
 
 
 def load_font():
