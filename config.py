@@ -6,8 +6,8 @@ ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'D
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1
 STUDY_DURATION_SECONDS = 3
-WEEK_WINDOW = (5, 9)
-MONTH_WINDOW = (25, 40)
+WEEK_WINDOW = (1, 2)
+MONTH_WINDOW = (7, 9)
 DEBUG_SKIP_WINDOWS = False  # 设为 True 可跳过时间窗口，仅用于本地测试
 ADMIN_USER = 'admin'
 ADMIN_PASS = 'memory2026'
