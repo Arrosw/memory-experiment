@@ -63,7 +63,7 @@ def get_random_image(category: str, material: str) -> str:
     if img_dir.exists():
         imgs = [f for f in img_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
         if imgs:
-            return f"/static/images/{category}/{material}/{random.choice(imgs).name}"
+            return url_for('study_img', relpath=f"images/{category}/{material}/{random.choice(imgs).name}")
     return url_for('placeholder', cat=category, mat=material)
 
 
@@ -72,7 +72,7 @@ def get_random_image_dog(breed: str, background: str) -> str:
     if img_dir.exists():
         imgs = [f for f in img_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
         if imgs:
-            return f"/static/images_dog/{breed}/{background}/{random.choice(imgs).name}"
+            return url_for('study_img', relpath=f"images_dog/{breed}/{background}/{random.choice(imgs).name}")
     return url_for('placeholder', cat=breed, mat=background)
 
 
@@ -515,7 +515,7 @@ def thumbs():
                 box = draw.multiline_textbbox((0, 0), text, font=font, align='center')
                 pos = ((512 - (box[2] - box[0])) / 2, (512 - (box[3] - box[1])) / 2)
                 draw.multiline_text(pos, text, fill='#1f2933', font=font, align='center', spacing=10)
-            img = img.resize((180, 180), Image.LANCZOS)
+            img = img.resize((300, 300), Image.LANCZOS)
             buf = BytesIO()
             img.save(buf, format='JPEG', quality=40)
             data[f'{category}_{material}'] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
@@ -535,11 +535,27 @@ def thumbs_dog():
             key = f'{breed}_{bg}'
             if files:
                 img = Image.open(random.choice(files)).convert('RGB')
-                img = img.resize((180, 180), Image.LANCZOS)
+                img = img.resize((300, 300), Image.LANCZOS)
                 buf = BytesIO()
                 img.save(buf, format='JPEG', quality=40)
                 data[key] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
     resp = jsonify(data)
+    resp.headers['Cache-Control'] = 'max-age=3600'
+    return resp
+
+
+@app.get('/api/study-img/<path:relpath>')
+def study_img(relpath: str):
+    if not (relpath.startswith('images/') or relpath.startswith('images_dog/')):
+        return Response('Not found', 404)
+    full_path = Path(app.static_folder or 'static') / relpath
+    if not full_path.exists() or not full_path.is_file():
+        return Response('Not found', 404)
+    img = Image.open(full_path).convert('RGB')
+    buf = BytesIO()
+    img.save(buf, format='JPEG', quality=70)
+    buf.seek(0)
+    resp = send_file(buf, mimetype='image/jpeg')
     resp.headers['Cache-Control'] = 'max-age=3600'
     return resp
 
