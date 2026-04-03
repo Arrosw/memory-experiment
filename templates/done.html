@@ -11,8 +11,8 @@
       {% for p in progress %}
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;">
         <div style="width:12px;height:12px;border-radius:50%;background:{{ 'var(--blue)' if p.done else 'var(--gray-5)' }};"></div>
-        <div style="font-size:13px;color:{{ 'var(--blue)' if p.done else 'var(--text-secondary)' }};font-weight:{{ '600' if p.done else '400' }};">{{ p.label }}</div>
-        {% if p.note %}<div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;">{{ p.note }}</div>{% endif %}
+        {% if p.label %}<div style="font-size:13px;color:{{ 'var(--blue)' if p.done else 'var(--text-secondary)' }};font-weight:{{ '600' if p.done else '400' }};">{{ p.label }}</div>{% endif %}
+        {% if p.note %}<div style="font-size:{{ '13px' if not p.label else '11px' }};color:{{ 'var(--blue)' if p.done else 'var(--text-tertiary)' }};white-space:nowrap;font-weight:{{ '600' if p.done else '400' }};">{{ p.note }}</div>{% endif %}
       </div>
       {% endfor %}
     </div>

@@ -309,8 +309,8 @@ def done():
     phase = request.args.get('phase', 'immediate')
     progress = [
         {'key': 'immediate', 'label': '即时', 'done': False, 'note': ''},
-        {'key': 'week',      'label': '一周',  'done': False, 'note': ''},
-        {'key': 'month',     'label': '一月',  'done': False, 'note': ''},
+        {'key': 'week',      'label': '',      'done': False, 'note': ''},
+        {'key': 'month',     'label': '',      'done': False, 'note': ''},
     ]
     if pid:
         db = get_db()
