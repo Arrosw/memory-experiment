@@ -7,6 +7,7 @@ ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'D
 TRIALS_PER_PARTICIPANT = 1
 STUDY_DURATION_SECONDS = 3
 DAY_WINDOW = (1, 2)
+DAY3_WINDOW = (3, 5)
 WEEK_WINDOW = (7, 9)
 WEEK2_WINDOW = (14, 16)
 WEEK3_WINDOW = (21, 23)
@@ -37,7 +38,7 @@ def init_db(db):
     CREATE TABLE IF NOT EXISTS responses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trial_id INTEGER NOT NULL REFERENCES trials(id),
-        phase TEXT NOT NULL CHECK(phase IN ('immediate','day','week','2week','3week','4week')),
+        phase TEXT NOT NULL CHECK(phase IN ('immediate','day','3day','week','2week','3week','4week')),
         responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         resp_category TEXT,
         resp_material TEXT,
@@ -58,13 +59,13 @@ def init_db(db):
     except Exception:
         pass  # column already exists
     schema_row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='responses'").fetchone()
-    if schema_row and "'2week'" not in schema_row['sql']:
+    if schema_row and "'3day'" not in schema_row['sql']:
         try:
             db.execute("ALTER TABLE responses RENAME TO responses_old")
             db.execute("""CREATE TABLE responses (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               trial_id INTEGER NOT NULL REFERENCES trials(id),
-              phase TEXT NOT NULL CHECK(phase IN ('immediate','day','week','2week','3week','4week')),
+              phase TEXT NOT NULL CHECK(phase IN ('immediate','day','3day','week','2week','3week','4week')),
               responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               resp_category TEXT,
               resp_material TEXT,

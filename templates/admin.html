@@ -24,7 +24,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
           {% set row = obj_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -49,7 +49,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
           {% set row = dog_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -73,7 +73,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
           {% set row = total_acc.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -115,7 +115,7 @@
   <div class="card">
     <h2>每位参与者明细</h2>
     <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:1780px;">
+      <table style="width:100%;border-collapse:collapse;min-width:1980px;">
         <thead>
           <tr>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
@@ -124,6 +124,7 @@
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">物体/狗</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">即时（时长/类别/属性）</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一天</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">三天</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一周</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">两周</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">三周</th>
@@ -139,6 +140,7 @@
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.category }} {{ row.object.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.immediate.elapsed_label }} / {{ (row.object.immediate.resp_cat ~ ('✓' if row.object.immediate.cat_ok == 1 else '✗')) if row.object.immediate.resp_cat else '—' }} / {{ (row.object.immediate.resp_mat ~ ('✓' if row.object.immediate.mat_ok == 1 else '✗')) if row.object.immediate.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.day.elapsed_label }} / {{ (row.object.day.resp_cat ~ ('✓' if row.object.day.cat_ok == 1 else '✗')) if row.object.day.resp_cat else '—' }} / {{ (row.object.day.resp_mat ~ ('✓' if row.object.day.mat_ok == 1 else '✗')) if row.object.day.resp_mat else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['3day'].elapsed_label }} / {{ (row.object['3day'].resp_cat ~ ('✓' if row.object['3day'].cat_ok == 1 else '✗')) if row.object['3day'].resp_cat else '—' }} / {{ (row.object['3day'].resp_mat ~ ('✓' if row.object['3day'].mat_ok == 1 else '✗')) if row.object['3day'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.week.elapsed_label }} / {{ (row.object.week.resp_cat ~ ('✓' if row.object.week.cat_ok == 1 else '✗')) if row.object.week.resp_cat else '—' }} / {{ (row.object.week.resp_mat ~ ('✓' if row.object.week.mat_ok == 1 else '✗')) if row.object.week.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['2week'].elapsed_label }} / {{ (row.object['2week'].resp_cat ~ ('✓' if row.object['2week'].cat_ok == 1 else '✗')) if row.object['2week'].resp_cat else '—' }} / {{ (row.object['2week'].resp_mat ~ ('✓' if row.object['2week'].mat_ok == 1 else '✗')) if row.object['2week'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['3week'].elapsed_label }} / {{ (row.object['3week'].resp_cat ~ ('✓' if row.object['3week'].cat_ok == 1 else '✗')) if row.object['3week'].resp_cat else '—' }} / {{ (row.object['3week'].resp_mat ~ ('✓' if row.object['3week'].mat_ok == 1 else '✗')) if row.object['3week'].resp_mat else '—' }}</td>
@@ -151,13 +153,14 @@
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.category }} {{ row.dog.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.immediate.elapsed_label }} / {{ (row.dog.immediate.resp_cat ~ ('✓' if row.dog.immediate.cat_ok == 1 else '✗')) if row.dog.immediate.resp_cat else '—' }} / {{ (row.dog.immediate.resp_mat ~ ('✓' if row.dog.immediate.mat_ok == 1 else '✗')) if row.dog.immediate.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.day.elapsed_label }} / {{ (row.dog.day.resp_cat ~ ('✓' if row.dog.day.cat_ok == 1 else '✗')) if row.dog.day.resp_cat else '—' }} / {{ (row.dog.day.resp_mat ~ ('✓' if row.dog.day.mat_ok == 1 else '✗')) if row.dog.day.resp_mat else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['3day'].elapsed_label }} / {{ (row.dog['3day'].resp_cat ~ ('✓' if row.dog['3day'].cat_ok == 1 else '✗')) if row.dog['3day'].resp_cat else '—' }} / {{ (row.dog['3day'].resp_mat ~ ('✓' if row.dog['3day'].mat_ok == 1 else '✗')) if row.dog['3day'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.week.elapsed_label }} / {{ (row.dog.week.resp_cat ~ ('✓' if row.dog.week.cat_ok == 1 else '✗')) if row.dog.week.resp_cat else '—' }} / {{ (row.dog.week.resp_mat ~ ('✓' if row.dog.week.mat_ok == 1 else '✗')) if row.dog.week.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['2week'].elapsed_label }} / {{ (row.dog['2week'].resp_cat ~ ('✓' if row.dog['2week'].cat_ok == 1 else '✗')) if row.dog['2week'].resp_cat else '—' }} / {{ (row.dog['2week'].resp_mat ~ ('✓' if row.dog['2week'].mat_ok == 1 else '✗')) if row.dog['2week'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['3week'].elapsed_label }} / {{ (row.dog['3week'].resp_cat ~ ('✓' if row.dog['3week'].cat_ok == 1 else '✗')) if row.dog['3week'].resp_cat else '—' }} / {{ (row.dog['3week'].resp_mat ~ ('✓' if row.dog['3week'].mat_ok == 1 else '✗')) if row.dog['3week'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['4week'].elapsed_label }} / {{ (row.dog['4week'].resp_cat ~ ('✓' if row.dog['4week'].cat_ok == 1 else '✗')) if row.dog['4week'].resp_cat else '—' }} / {{ (row.dog['4week'].resp_mat ~ ('✓' if row.dog['4week'].mat_ok == 1 else '✗')) if row.dog['4week'].resp_mat else '—' }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="10" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+            <tr><td colspan="11" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
           {% endfor %}
         </tbody>
       </table>

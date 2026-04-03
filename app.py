@@ -10,13 +10,13 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, WEEK3_WINDOW, WEEK4_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DAY3_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, WEEK3_WINDOW, WEEK4_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
     'glass': '#E0F7FA', 'ceramic': '#FFCCBC', 'stone': '#9E9E9E',
 }
-PHASES = {'immediate', 'day', 'week', '2week', '3week', '4week'}
+PHASES = {'immediate', 'day', '3day', 'week', '2week', '3week', '4week'}
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
 
@@ -148,6 +148,8 @@ def get_phase_row(db, participant_id: int):
         days = (now - parse_ts(trial['study_started_at'])).days
         if 'day' not in done and (DEBUG_SKIP_WINDOWS or DAY_WINDOW[0] <= days <= DAY_WINDOW[1]):
             return trial, 'day'
+        if '3day' not in done and (DEBUG_SKIP_WINDOWS or DAY3_WINDOW[0] <= days <= DAY3_WINDOW[1]):
+            return trial, '3day'
         if 'week' not in done and (DEBUG_SKIP_WINDOWS or WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]):
             return trial, 'week'
         if '2week' not in done and (DEBUG_SKIP_WINDOWS or WEEK2_WINDOW[0] <= days <= WEEK2_WINDOW[1]):
@@ -316,6 +318,7 @@ def done():
     progress = [
         {'key': 'immediate', 'label': '即时', 'done': False, 'note': ''},
         {'key': 'day',       'label': '',      'done': False, 'note': ''},
+        {'key': '3day',      'label': '',      'done': False, 'note': ''},
         {'key': 'week',      'label': '',      'done': False, 'note': ''},
         {'key': '2week',     'label': '',      'done': False, 'note': ''},
         {'key': '3week',     'label': '',      'done': False, 'note': ''},
@@ -340,7 +343,7 @@ def done():
             if first_trial['study_started_at']:
                 started = parse_ts(first_trial['study_started_at'])
                 today = datetime.now(timezone.utc).date()
-                for key, offset in [('day', DAY_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('2week', WEEK2_WINDOW[0]), ('3week', WEEK3_WINDOW[0]), ('4week', WEEK4_WINDOW[0])]:
+                for key, offset in [('day', DAY_WINDOW[0]), ('3day', DAY3_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('2week', WEEK2_WINDOW[0]), ('3week', WEEK3_WINDOW[0]), ('4week', WEEK4_WINDOW[0])]:
                     entry = next(x for x in progress if x['key'] == key)
                     if not entry['done']:
                         target = (started + timedelta(days=offset)).date()
@@ -413,7 +416,7 @@ def admin():
         return (a + b) / 2
 
     total_acc = {}
-    for ph in ['immediate', 'day', 'week', '2week', '3week', '4week']:
+    for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week']:
         o = obj_acc_map.get(ph, {})
         d = dog_acc_map.get(ph, {})
         total_acc[ph] = {
@@ -424,6 +427,7 @@ def admin():
         'cat': [
             round(total_acc['immediate']['low'] * 100, 1) if total_acc.get('immediate', {}).get('low') is not None else None,
             round(total_acc['day']['low'] * 100, 1) if total_acc.get('day', {}).get('low') is not None else None,
+            round(total_acc['3day']['low'] * 100, 1) if total_acc.get('3day', {}).get('low') is not None else None,
             round(total_acc['week']['low'] * 100, 1) if total_acc.get('week', {}).get('low') is not None else None,
             round(total_acc['2week']['low'] * 100, 1) if total_acc.get('2week', {}).get('low') is not None else None,
             round(total_acc['3week']['low'] * 100, 1) if total_acc.get('3week', {}).get('low') is not None else None,
@@ -432,6 +436,7 @@ def admin():
         'mat': [
             round(total_acc['immediate']['high'] * 100, 1) if total_acc.get('immediate', {}).get('high') is not None else None,
             round(total_acc['day']['high'] * 100, 1) if total_acc.get('day', {}).get('high') is not None else None,
+            round(total_acc['3day']['high'] * 100, 1) if total_acc.get('3day', {}).get('high') is not None else None,
             round(total_acc['week']['high'] * 100, 1) if total_acc.get('week', {}).get('high') is not None else None,
             round(total_acc['2week']['high'] * 100, 1) if total_acc.get('2week', {}).get('high') is not None else None,
             round(total_acc['3week']['high'] * 100, 1) if total_acc.get('3week', {}).get('high') is not None else None,
@@ -462,8 +467,8 @@ def admin():
             row_map[code] = {
                 'code': row['code'],
                 'nickname': row['nickname'],
-                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
-                'dog':    {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
+                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), '3day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
+                'dog':    {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), '3day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
             }
             per_user.append(row_map[code])
         tt = row['trial_type']
