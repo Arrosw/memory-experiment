@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}请记住这个物品{% endblock %}
+{% block title %}请记住这张图像{% endblock %}
 
 {% block content %}
   <div class="card text-center">
-    <h1>请记住这个物品</h1>
+    <h1>请记住这张图像</h1>
     <img src="{{ image_url }}" alt="学习图像" style="width:100%; border-radius:var(--r-md); margin-bottom:var(--s6);">
 
     <svg id="svg-timer" width="64" height="64" viewBox="0 0 64 64" style="display:block;margin:0 auto var(--s6)">
@@ -16,7 +16,6 @@
             font-size="24" font-weight="600" fill="var(--text-primary)">{{ duration }}</text>
     </svg>
 
-    <p>你的参与码：<strong>{{ code }}</strong></p>
   </div>
 
   <script>
