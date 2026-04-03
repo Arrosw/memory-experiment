@@ -10,13 +10,13 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, MONTH_WINDOW, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, WEEK3_WINDOW, WEEK4_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
     'glass': '#E0F7FA', 'ceramic': '#FFCCBC', 'stone': '#9E9E9E',
 }
-PHASES = {'immediate', 'day', 'week', 'month'}
+PHASES = {'immediate', 'day', 'week', '2week', '3week', '4week'}
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
 
@@ -150,8 +150,12 @@ def get_phase_row(db, participant_id: int):
             return trial, 'day'
         if 'week' not in done and (DEBUG_SKIP_WINDOWS or WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]):
             return trial, 'week'
-        if 'month' not in done and (DEBUG_SKIP_WINDOWS or days >= MONTH_WINDOW[0]):
-            return trial, 'month'
+        if '2week' not in done and (DEBUG_SKIP_WINDOWS or WEEK2_WINDOW[0] <= days <= WEEK2_WINDOW[1]):
+            return trial, '2week'
+        if '3week' not in done and (DEBUG_SKIP_WINDOWS or WEEK3_WINDOW[0] <= days <= WEEK3_WINDOW[1]):
+            return trial, '3week'
+        if '4week' not in done and (DEBUG_SKIP_WINDOWS or days >= WEEK4_WINDOW[0]):
+            return trial, '4week'
     return None, None
 
 
@@ -313,7 +317,9 @@ def done():
         {'key': 'immediate', 'label': '即时', 'done': False, 'note': ''},
         {'key': 'day',       'label': '',      'done': False, 'note': ''},
         {'key': 'week',      'label': '',      'done': False, 'note': ''},
-        {'key': 'month',     'label': '',      'done': False, 'note': ''},
+        {'key': '2week',     'label': '',      'done': False, 'note': ''},
+        {'key': '3week',     'label': '',      'done': False, 'note': ''},
+        {'key': '4week',     'label': '',      'done': False, 'note': ''},
     ]
     if pid:
         db = get_db()
@@ -334,7 +340,7 @@ def done():
             if first_trial['study_started_at']:
                 started = parse_ts(first_trial['study_started_at'])
                 today = datetime.now(timezone.utc).date()
-                for key, offset in [('day', DAY_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('month', MONTH_WINDOW[0])]:
+                for key, offset in [('day', DAY_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('2week', WEEK2_WINDOW[0]), ('3week', WEEK3_WINDOW[0]), ('4week', WEEK4_WINDOW[0])]:
                     entry = next(x for x in progress if x['key'] == key)
                     if not entry['done']:
                         target = (started + timedelta(days=offset)).date()
@@ -407,7 +413,7 @@ def admin():
         return (a + b) / 2
 
     total_acc = {}
-    for ph in ['immediate', 'day', 'week', 'month']:
+    for ph in ['immediate', 'day', 'week', '2week', '3week', '4week']:
         o = obj_acc_map.get(ph, {})
         d = dog_acc_map.get(ph, {})
         total_acc[ph] = {
@@ -419,13 +425,17 @@ def admin():
             round(total_acc['immediate']['low'] * 100, 1) if total_acc.get('immediate', {}).get('low') is not None else None,
             round(total_acc['day']['low'] * 100, 1) if total_acc.get('day', {}).get('low') is not None else None,
             round(total_acc['week']['low'] * 100, 1) if total_acc.get('week', {}).get('low') is not None else None,
-            round(total_acc['month']['low'] * 100, 1) if total_acc.get('month', {}).get('low') is not None else None,
+            round(total_acc['2week']['low'] * 100, 1) if total_acc.get('2week', {}).get('low') is not None else None,
+            round(total_acc['3week']['low'] * 100, 1) if total_acc.get('3week', {}).get('low') is not None else None,
+            round(total_acc['4week']['low'] * 100, 1) if total_acc.get('4week', {}).get('low') is not None else None,
         ],
         'mat': [
             round(total_acc['immediate']['high'] * 100, 1) if total_acc.get('immediate', {}).get('high') is not None else None,
             round(total_acc['day']['high'] * 100, 1) if total_acc.get('day', {}).get('high') is not None else None,
             round(total_acc['week']['high'] * 100, 1) if total_acc.get('week', {}).get('high') is not None else None,
-            round(total_acc['month']['high'] * 100, 1) if total_acc.get('month', {}).get('high') is not None else None,
+            round(total_acc['2week']['high'] * 100, 1) if total_acc.get('2week', {}).get('high') is not None else None,
+            round(total_acc['3week']['high'] * 100, 1) if total_acc.get('3week', {}).get('high') is not None else None,
+            round(total_acc['4week']['high'] * 100, 1) if total_acc.get('4week', {}).get('high') is not None else None,
         ],
     }
     recent = db.execute("SELECT code, nickname, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
@@ -433,7 +443,7 @@ def admin():
         "SELECT "
         "p.code, p.nickname, t.id trial_id, t.trial_type, t.category, t.material, r.phase, "
         "CAST((julianday(r.responded_at) - julianday(t.study_started_at)) * 86400 AS INTEGER) AS elapsed_seconds, "
-        "r.category_correct, r.material_correct "
+        "r.category_correct, r.material_correct, r.resp_category, r.resp_material "
         "FROM participants p "
         "JOIN trials t ON t.participant_id = p.id "
         "LEFT JOIN responses r ON r.trial_id = t.id "
@@ -444,7 +454,7 @@ def admin():
     row_map = {}
 
     def default_phase():
-        return {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None}
+        return {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None, 'resp_cat': None, 'resp_mat': None}
 
     for row in detail_rows:
         code = row['code']
@@ -452,8 +462,8 @@ def admin():
             row_map[code] = {
                 'code': row['code'],
                 'nickname': row['nickname'],
-                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), 'month': default_phase()},
-                'dog':    {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), 'month': default_phase()},
+                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
+                'dog':    {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
             }
             per_user.append(row_map[code])
         tt = row['trial_type']
@@ -465,6 +475,8 @@ def admin():
                     'elapsed_label': elapsed_label(row['elapsed_seconds']),
                     'cat_ok': row['category_correct'],
                     'mat_ok': row['material_correct'],
+                    'resp_cat': row['resp_category'],
+                    'resp_mat': row['resp_material'],
                 }
 
     stats = {'total_participants': total, 'phase_counts': phase_counts, 'accuracy': accuracy, 'recent': recent}
