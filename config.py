@@ -6,8 +6,9 @@ ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'D
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1
 STUDY_DURATION_SECONDS = 3
-WEEK_WINDOW = (1, 2)
-MONTH_WINDOW = (7, 9)
+DAY_WINDOW = (1, 2)
+WEEK_WINDOW = (7, 9)
+MONTH_WINDOW = (25, 40)
 DEBUG_SKIP_WINDOWS = False  # 设为 True 可跳过时间窗口，仅用于本地测试
 ADMIN_USER = 'admin'
 ADMIN_PASS = 'memory2026'
@@ -34,7 +35,7 @@ def init_db(db):
     CREATE TABLE IF NOT EXISTS responses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trial_id INTEGER NOT NULL REFERENCES trials(id),
-        phase TEXT NOT NULL CHECK(phase IN ('immediate','week','month')),
+        phase TEXT NOT NULL CHECK(phase IN ('immediate','day','week','month')),
         responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         resp_category TEXT,
         resp_material TEXT,
@@ -54,3 +55,26 @@ def init_db(db):
         db.commit()
     except Exception:
         pass  # column already exists
+    schema_row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='responses'").fetchone()
+    if schema_row and "'day'" not in schema_row['sql']:
+        try:
+            db.execute("ALTER TABLE responses RENAME TO responses_old")
+            db.execute("""CREATE TABLE responses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trial_id INTEGER NOT NULL REFERENCES trials(id),
+            phase TEXT NOT NULL CHECK(phase IN ('immediate','day','week','month')),
+            responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resp_category TEXT,
+            resp_material TEXT,
+            resp_col INTEGER,
+            resp_row INTEGER,
+            category_correct INTEGER CHECK(category_correct IN (0,1)),
+            material_correct INTEGER CHECK(material_correct IN (0,1)),
+            response_time_ms INTEGER
+        )""")
+            db.execute("INSERT INTO responses SELECT * FROM responses_old")
+            db.execute("DROP TABLE responses_old")
+            db.execute("CREATE INDEX IF NOT EXISTS idx_resp_trial ON responses(trial_id)")
+            db.commit()
+        except Exception:
+            db.rollback()

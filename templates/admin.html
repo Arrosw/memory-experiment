@@ -24,7 +24,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'week', 'month'] %}
+        {% for ph in ['immediate', 'day', 'week', 'month'] %}
           {% set row = obj_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -49,7 +49,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'week', 'month'] %}
+        {% for ph in ['immediate', 'day', 'week', 'month'] %}
           {% set row = dog_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -73,7 +73,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'week', 'month'] %}
+        {% for ph in ['immediate', 'day', 'week', 'month'] %}
           {% set row = total_acc.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -115,7 +115,7 @@
   <div class="card">
     <h2>每位参与者明细</h2>
     <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:1180px;">
+      <table style="width:100%;border-collapse:collapse;min-width:1380px;">
         <thead>
           <tr>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
@@ -123,6 +123,7 @@
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">类型</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">物体/狗</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">即时（时长/类别/属性）</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一天</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一周</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一月</th>
           </tr>
@@ -135,6 +136,7 @@
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">物体</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.category }} {{ row.object.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.immediate.elapsed_label }} / {{ '✓' if row.object.immediate.cat_ok == 1 else '✗' if row.object.immediate.cat_ok == 0 else '—' }} / {{ '✓' if row.object.immediate.mat_ok == 1 else '✗' if row.object.immediate.mat_ok == 0 else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.day.elapsed_label }} / {{ '✓' if row.object.day.cat_ok == 1 else '✗' if row.object.day.cat_ok == 0 else '—' }} / {{ '✓' if row.object.day.mat_ok == 1 else '✗' if row.object.day.mat_ok == 0 else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.week.elapsed_label }} / {{ '✓' if row.object.week.cat_ok == 1 else '✗' if row.object.week.cat_ok == 0 else '—' }} / {{ '✓' if row.object.week.mat_ok == 1 else '✗' if row.object.week.mat_ok == 0 else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.month.elapsed_label }} / {{ '✓' if row.object.month.cat_ok == 1 else '✗' if row.object.month.cat_ok == 0 else '—' }} / {{ '✓' if row.object.month.mat_ok == 1 else '✗' if row.object.month.mat_ok == 0 else '—' }}</td>
             </tr>
@@ -144,11 +146,12 @@
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">狗</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.category }} {{ row.dog.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.immediate.elapsed_label }} / {{ '✓' if row.dog.immediate.cat_ok == 1 else '✗' if row.dog.immediate.cat_ok == 0 else '—' }} / {{ '✓' if row.dog.immediate.mat_ok == 1 else '✗' if row.dog.immediate.mat_ok == 0 else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.day.elapsed_label }} / {{ '✓' if row.dog.day.cat_ok == 1 else '✗' if row.dog.day.cat_ok == 0 else '—' }} / {{ '✓' if row.dog.day.mat_ok == 1 else '✗' if row.dog.day.mat_ok == 0 else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.week.elapsed_label }} / {{ '✓' if row.dog.week.cat_ok == 1 else '✗' if row.dog.week.cat_ok == 0 else '—' }} / {{ '✓' if row.dog.week.mat_ok == 1 else '✗' if row.dog.week.mat_ok == 0 else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.month.elapsed_label }} / {{ '✓' if row.dog.month.cat_ok == 1 else '✗' if row.dog.month.cat_ok == 0 else '—' }} / {{ '✓' if row.dog.month.mat_ok == 1 else '✗' if row.dog.month.mat_ok == 0 else '—' }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+            <tr><td colspan="8" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
           {% endfor %}
         </tbody>
       </table>
