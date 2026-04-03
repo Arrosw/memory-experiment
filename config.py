@@ -1,5 +1,7 @@
 CATEGORIES = ['bowl', 'mug', 'pitcher', 'tray', 'vase']
 MATERIALS = ['wood', 'stone', 'ceramic', 'metal', 'glass']
+DOG_BREEDS = ['german shepherd', 'golden retriever', 'husky', 'labrador', 'shiba inu']
+DOG_BACKGROUNDS = ['dry_grassy_ground', 'dusty_ground', 'fine_gravel_ground', 'sand_ground', 'slightly_damp_dirt']
 ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'Deer', 'Lynx',
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1
@@ -26,6 +28,7 @@ def init_db(db):
         category TEXT NOT NULL,
         material TEXT NOT NULL,
         trial_order INTEGER NOT NULL,
+        trial_type TEXT NOT NULL DEFAULT 'object',
         study_started_at TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS responses (
@@ -46,3 +49,8 @@ def init_db(db):
     CREATE INDEX IF NOT EXISTS idx_resp_trial ON responses(trial_id);
     """)
     db.commit()
+    try:
+        db.execute("ALTER TABLE trials ADD COLUMN trial_type TEXT NOT NULL DEFAULT 'object'")
+        db.commit()
+    except Exception:
+        pass  # column already exists

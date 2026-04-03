@@ -10,7 +10,7 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DB_PATH, DEBUG_SKIP_WINDOWS, MATERIALS, MONTH_WINDOW, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, MONTH_WINDOW, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
@@ -40,6 +40,24 @@ def scan_available():
     return cats, mats
 
 
+def scan_available_dog():
+    images_dir = Path(app.static_folder or 'static') / 'images_dog'
+    combos = set()
+    if images_dir.exists():
+        for breed_dir in images_dir.iterdir():
+            if breed_dir.is_dir() and breed_dir.name in DOG_BREEDS:
+                for bg_dir in breed_dir.iterdir():
+                    if bg_dir.is_dir() and bg_dir.name in DOG_BACKGROUNDS:
+                        imgs = [f for f in bg_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
+                        if imgs:
+                            combos.add((breed_dir.name, bg_dir.name))
+    if not combos:
+        return list(DOG_BREEDS), list(DOG_BACKGROUNDS)
+    breeds = sorted({b for b, bg in combos}, key=lambda x: DOG_BREEDS.index(x))
+    bgs = sorted({bg for b, bg in combos}, key=lambda x: DOG_BACKGROUNDS.index(x))
+    return breeds, bgs
+
+
 def get_random_image(category: str, material: str) -> str:
     img_dir = Path(app.static_folder or 'static') / 'images' / category / material
     if img_dir.exists():
@@ -47,6 +65,15 @@ def get_random_image(category: str, material: str) -> str:
         if imgs:
             return f"/static/images/{category}/{material}/{random.choice(imgs).name}"
     return url_for('placeholder', cat=category, mat=material)
+
+
+def get_random_image_dog(breed: str, background: str) -> str:
+    img_dir = Path(app.static_folder or 'static') / 'images_dog' / breed / background
+    if img_dir.exists():
+        imgs = [f for f in img_dir.iterdir() if f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')]
+        if imgs:
+            return f"/static/images_dog/{breed}/{background}/{random.choice(imgs).name}"
+    return url_for('placeholder', cat=breed, mat=background)
 
 
 def ensure_db() -> None:
@@ -81,15 +108,25 @@ def generate_code(db) -> str:
 
 
 def assign_trials(db, participant_id: int) -> None:
-    counts = db.execute("SELECT category, material, COUNT(*) c FROM trials GROUP BY category, material").fetchall()
+    counts = db.execute("SELECT category, material, COUNT(*) c FROM trials WHERE trial_type='object' GROUP BY category, material").fetchall()
     count_map = {(r['category'], r['material']): r['c'] for r in counts}
     avail_cats, avail_mats = scan_available()
     all_combos = [(c, m) for c in avail_cats for m in avail_mats]
     random.shuffle(all_combos)
     all_combos.sort(key=lambda x: count_map.get(x, 0))
-    selected = all_combos[:TRIALS_PER_PARTICIPANT]
-    for order, (cat, mat) in enumerate(selected, 1):
-        db.execute("INSERT INTO trials (participant_id, category, material, trial_order) VALUES (?,?,?,?)", (participant_id, cat, mat, order))
+    cat, mat = all_combos[0]
+    db.execute("INSERT INTO trials (participant_id, category, material, trial_order, trial_type) VALUES (?,?,?,?,?)",
+               (participant_id, cat, mat, 1, 'object'))
+
+    dog_counts = db.execute("SELECT category, material, COUNT(*) c FROM trials WHERE trial_type='dog' GROUP BY category, material").fetchall()
+    dog_count_map = {(r['category'], r['material']): r['c'] for r in dog_counts}
+    avail_breeds, avail_bgs = scan_available_dog()
+    dog_combos = [(b, bg) for b in avail_breeds for bg in avail_bgs]
+    random.shuffle(dog_combos)
+    dog_combos.sort(key=lambda x: dog_count_map.get(x, 0))
+    breed, bg = dog_combos[0]
+    db.execute("INSERT INTO trials (participant_id, category, material, trial_order, trial_type) VALUES (?,?,?,?,?)",
+               (participant_id, breed, bg, 2, 'dog'))
     db.commit()
 
 
@@ -180,8 +217,11 @@ def study():
         trial_id, phase = get_current_phase(db, pid)
         return redirect(url_for('recall', phase=phase) if trial_id and phase in PHASES else url_for('done'))
     code = db.execute("SELECT code FROM participants WHERE id=?", (pid,)).fetchone()['code']
-    img_url = get_random_image(trial['category'], trial['material'])
-    return render_template('study.html', image_url=img_url, duration=STUDY_DURATION_SECONDS, code=code)
+    if trial['trial_type'] == 'dog':
+        img_url = get_random_image_dog(trial['category'], trial['material'])
+    else:
+        img_url = get_random_image(trial['category'], trial['material'])
+    return render_template('study.html', image_url=img_url, duration=STUDY_DURATION_SECONDS, code=code, trial_type=trial['trial_type'])
 
 
 @app.post('/api/study-start')
@@ -212,7 +252,10 @@ def recall(phase: str):
     trial, current = get_phase_row(db, pid)
     if not trial or current != phase:
         return redirect(url_for('done'))
-    avail_cats, avail_mats = scan_available()
+    if trial['trial_type'] == 'dog':
+        avail_cats, avail_mats = scan_available_dog()
+    else:
+        avail_cats, avail_mats = scan_available()
     x_order = list(range(len(avail_mats)))
     y_order = list(range(len(avail_cats)))
     random.shuffle(y_order)
@@ -220,8 +263,9 @@ def recall(phase: str):
     session['recall_y_order'] = y_order
     session['recall_avail_cats'] = avail_cats
     session['recall_avail_mats'] = avail_mats
+    session['recall_trial_type'] = trial['trial_type']
     return render_template('recall.html', phase=phase, x_order=x_order, y_order=y_order,
-                           avail_cats=avail_cats, avail_mats=avail_mats)
+                           avail_cats=avail_cats, avail_mats=avail_mats, trial_type=trial['trial_type'])
 
 
 @app.post('/api/recall/<phase>')
@@ -248,7 +292,14 @@ def save_recall(phase: str):
         (trial['id'], phase, resp_category, resp_material, x_order[xi], y_order[yi], int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))
     )
     db.commit()
-    return jsonify({'next_url': url_for('done', phase=phase)})
+    next_trial, next_phase = get_phase_row(db, pid)
+    if next_trial is None:
+        next_url = url_for('done', phase=phase)
+    elif next_phase == 'study':
+        next_url = url_for('study')
+    else:
+        next_url = url_for('recall', phase=next_phase)
+    return jsonify({'next_url': next_url})
 
 
 @app.get('/done')
@@ -265,17 +316,20 @@ def done():
         db = get_db()
         row = db.execute("SELECT code FROM participants WHERE id=?", (pid,)).fetchone()
         code = row['code'] if row else ''
-        trial_row = db.execute(
-            "SELECT id, study_started_at FROM trials WHERE participant_id=? ORDER BY id LIMIT 1", (pid,)
-        ).fetchone()
-        if trial_row:
-            phases_done = {r['phase'] for r in db.execute(
-                "SELECT phase FROM responses WHERE trial_id=?", (trial_row['id'],)
-            ).fetchall()}
+        trials = db.execute("SELECT id, study_started_at FROM trials WHERE participant_id=? ORDER BY trial_order", (pid,)).fetchall()
+        total_trials = len(trials)
+        if trials:
+            resp_phases = db.execute(
+                "SELECT phase, COUNT(DISTINCT trial_id) c FROM responses "
+                "WHERE trial_id IN (SELECT id FROM trials WHERE participant_id=?) GROUP BY phase",
+                (pid,)
+            ).fetchall()
+            phases_done = {r['phase'] for r in resp_phases if r['c'] >= total_trials}
             for p in progress:
                 p['done'] = p['key'] in phases_done
-            if trial_row['study_started_at']:
-                started = parse_ts(trial_row['study_started_at'])
+            first_trial = trials[0]
+            if first_trial['study_started_at']:
+                started = parse_ts(first_trial['study_started_at'])
                 today = datetime.now(timezone.utc).date()
                 for key, offset in [('week', WEEK_WINDOW[0]), ('month', MONTH_WINDOW[0])]:
                     entry = next(x for x in progress if x['key'] == key)
@@ -325,23 +379,54 @@ def admin():
     total = db.execute("SELECT COUNT(*) c FROM participants").fetchone()['c']
     phase_counts = db.execute("SELECT phase, COUNT(*) c FROM responses GROUP BY phase").fetchall()
     accuracy = db.execute("SELECT phase, AVG(category_correct) ac, AVG(material_correct) am FROM responses GROUP BY phase").fetchall()
-    acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in accuracy}
+    obj_phase_counts = db.execute(
+        "SELECT r.phase, COUNT(*) c FROM responses r JOIN trials t ON r.trial_id = t.id WHERE t.trial_type = 'object' GROUP BY r.phase"
+    ).fetchall()
+    dog_phase_counts = db.execute(
+        "SELECT r.phase, COUNT(*) c FROM responses r JOIN trials t ON r.trial_id = t.id WHERE t.trial_type = 'dog' GROUP BY r.phase"
+    ).fetchall()
+    obj_accuracy = db.execute(
+        "SELECT r.phase, AVG(r.category_correct) ac, AVG(r.material_correct) am "
+        "FROM responses r JOIN trials t ON r.trial_id = t.id WHERE t.trial_type = 'object' GROUP BY r.phase"
+    ).fetchall()
+    dog_accuracy = db.execute(
+        "SELECT r.phase, AVG(r.category_correct) ac, AVG(r.material_correct) am "
+        "FROM responses r JOIN trials t ON r.trial_id = t.id WHERE t.trial_type = 'dog' GROUP BY r.phase"
+    ).fetchall()
+    obj_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in obj_accuracy}
+    dog_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in dog_accuracy}
+
+    def avg2(a, b):
+        if a is None and b is None:
+            return None
+        a = a or 0
+        b = b or 0
+        return (a + b) / 2
+
+    total_acc = {}
+    for ph in ['immediate', 'week', 'month']:
+        o = obj_acc_map.get(ph, {})
+        d = dog_acc_map.get(ph, {})
+        total_acc[ph] = {
+            'low': avg2(o.get('cat'), d.get('cat')),
+            'high': avg2(o.get('mat'), d.get('mat')),
+        }
     chart_data = {
         'cat': [
-            round(acc_map['immediate']['cat'] * 100, 1) if acc_map.get('immediate', {}).get('cat') is not None else None,
-            round(acc_map['week']['cat'] * 100, 1) if acc_map.get('week', {}).get('cat') is not None else None,
-            round(acc_map['month']['cat'] * 100, 1) if acc_map.get('month', {}).get('cat') is not None else None,
+            round(total_acc['immediate']['low'] * 100, 1) if total_acc.get('immediate', {}).get('low') is not None else None,
+            round(total_acc['week']['low'] * 100, 1) if total_acc.get('week', {}).get('low') is not None else None,
+            round(total_acc['month']['low'] * 100, 1) if total_acc.get('month', {}).get('low') is not None else None,
         ],
         'mat': [
-            round(acc_map['immediate']['mat'] * 100, 1) if acc_map.get('immediate', {}).get('mat') is not None else None,
-            round(acc_map['week']['mat'] * 100, 1) if acc_map.get('week', {}).get('mat') is not None else None,
-            round(acc_map['month']['mat'] * 100, 1) if acc_map.get('month', {}).get('mat') is not None else None,
+            round(total_acc['immediate']['high'] * 100, 1) if total_acc.get('immediate', {}).get('high') is not None else None,
+            round(total_acc['week']['high'] * 100, 1) if total_acc.get('week', {}).get('high') is not None else None,
+            round(total_acc['month']['high'] * 100, 1) if total_acc.get('month', {}).get('high') is not None else None,
         ],
     }
     recent = db.execute("SELECT code, nickname, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
     detail_rows = db.execute(
         "SELECT "
-        "p.code, p.nickname, t.id trial_id, t.category, t.material, r.phase, "
+        "p.code, p.nickname, t.id trial_id, t.trial_type, t.category, t.material, r.phase, "
         "CAST((julianday(r.responded_at) - julianday(t.study_started_at)) * 86400 AS INTEGER) AS elapsed_seconds, "
         "r.category_correct, r.material_correct "
         "FROM participants p "
@@ -352,28 +437,44 @@ def admin():
 
     per_user = []
     row_map = {}
+
+    def default_phase():
+        return {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None}
+
     for row in detail_rows:
-        key = (row['code'], row['trial_id'])
-        if key not in row_map:
-            row_map[key] = {
+        code = row['code']
+        if code not in row_map:
+            row_map[code] = {
                 'code': row['code'],
                 'nickname': row['nickname'],
-                'category': row['category'],
-                'material': row['material'],
-                'immediate': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
-                'week': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
-                'month': {'elapsed_label': '—', 'cat_ok': None, 'mat_ok': None},
+                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'week': default_phase(), 'month': default_phase()},
+                'dog': {'category': '', 'material': '', 'immediate': default_phase(), 'week': default_phase(), 'month': default_phase()},
             }
-            per_user.append(row_map[key])
-        if row['phase'] in PHASES:
-            row_map[key][row['phase']] = {
-                'elapsed_label': elapsed_label(row['elapsed_seconds']),
-                'cat_ok': row['category_correct'],
-                'mat_ok': row['material_correct'],
-            }
+            per_user.append(row_map[code])
+        tt = row['trial_type']
+        if tt in ('object', 'dog'):
+            row_map[code][tt]['category'] = row['category']
+            row_map[code][tt]['material'] = row['material']
+            if row['phase'] in PHASES:
+                row_map[code][tt][row['phase']] = {
+                    'elapsed_label': elapsed_label(row['elapsed_seconds']),
+                    'cat_ok': row['category_correct'],
+                    'mat_ok': row['material_correct'],
+                }
 
     stats = {'total_participants': total, 'phase_counts': phase_counts, 'accuracy': accuracy, 'recent': recent}
-    return render_template('admin.html', stats=stats, per_user=per_user, chart_data=chart_data, debug_skip=DEBUG_SKIP_WINDOWS)
+    return render_template(
+        'admin.html',
+        stats=stats,
+        obj_acc_map=obj_acc_map,
+        dog_acc_map=dog_acc_map,
+        total_acc=total_acc,
+        per_user=per_user,
+        obj_phase_counts={r['phase']: r['c'] for r in obj_phase_counts},
+        dog_phase_counts={r['phase']: r['c'] for r in dog_phase_counts},
+        chart_data=chart_data,
+        debug_skip=DEBUG_SKIP_WINDOWS,
+    )
 
 
 @app.get('/admin/export.csv')
@@ -381,12 +482,12 @@ def export_csv():
     if not admin_ok():
         return admin_fail()
     rows = get_db().execute(
-        "SELECT p.code participant_code, p.nickname, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
+        "SELECT p.code participant_code, p.nickname, t.trial_type, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
         "FROM responses r JOIN trials t ON r.trial_id=t.id JOIN participants p ON t.participant_id=p.id ORDER BY r.id"
     ).fetchall()
     buf = StringIO()
     writer = csv.writer(buf)
-    writer.writerow(['participant_code', 'nickname', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
+    writer.writerow(['participant_code', 'nickname', 'trial_type', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
     for row in rows:
         writer.writerow([row[k] for k in row.keys()])
     return Response(buf.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=responses.csv'})
@@ -413,6 +514,24 @@ def thumbs():
             buf = BytesIO()
             img.save(buf, format='JPEG', quality=65)
             data[f'{category}_{material}'] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+    return jsonify(data)
+
+
+@app.get('/api/thumbs-dog')
+def thumbs_dog():
+    avail_breeds, avail_bgs = scan_available_dog()
+    data = {}
+    for breed in avail_breeds:
+        for bg in avail_bgs:
+            image_dir = Path(app.static_folder or 'static') / 'images_dog' / breed / bg
+            files = [p for p in image_dir.iterdir() if p.is_file() and p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'}] if image_dir.exists() else []
+            key = f'{breed}_{bg}'
+            if files:
+                img = Image.open(random.choice(files)).convert('RGB')
+                img = img.resize((300, 300), Image.LANCZOS)
+                buf = BytesIO()
+                img.save(buf, format='JPEG', quality=65)
+                data[key] = f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
     return jsonify(data)
 
 

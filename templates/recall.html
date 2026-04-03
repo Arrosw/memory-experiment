@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}找到你记忆中的物品{% endblock %}
+{% block title %}{% if trial_type == 'dog' %}找到你记忆中的狗{% else %}找到你记忆中的物品{% endif %}{% endblock %}
 
 {% block content %}
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:var(--s6) var(--s6) var(--s4);">
+      {% if trial_type == 'dog' %}
+      <h1>找到和你记忆中最相近的狗</h1>
+      <p>分别拖动 X 轴和 Y 轴上的蓝点，找到你记忆中的图像，然后确认</p>
+      {% else %}
       <h1>找到和你记忆中最相近的物品</h1>
       <p>分别拖动 X 轴和 Y 轴上的蓝点，找到你记忆中的图像，然后确认</p>
+      {% endif %}
     </div>
     <div id="coord-wrap" style="user-select:none;-webkit-user-select:none;">
       <div id="left-col">
@@ -30,6 +35,7 @@
 
   <div id="phase-data"
        data-phase="{{ phase }}"
+       data-trial-type="{{ trial_type }}"
        data-x-order="{{ x_order | tojson }}"
        data-y-order="{{ y_order | tojson }}"
        data-avail-cats='{{ avail_cats | tojson }}'

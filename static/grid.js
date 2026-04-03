@@ -1,5 +1,6 @@
 const phaseData = document.getElementById("phase-data");
 const PHASE     = phaseData.dataset.phase;
+const TRIAL_TYPE = phaseData.dataset.trialType || 'object';
 const X_ORDER   = JSON.parse(phaseData.dataset.xOrder);
 const Y_ORDER   = JSON.parse(phaseData.dataset.yOrder);
 const AVAIL_MATS = JSON.parse(phaseData.dataset.availMats);
@@ -140,7 +141,8 @@ confirmEl.addEventListener("click", async () => {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const resp = await fetch("/api/thumbs");
+  const thumbsUrl = TRIAL_TYPE === 'dog' ? '/api/thumbs-dog' : '/api/thumbs';
+  const resp = await fetch(thumbsUrl);
   thumbMap = await resp.json();
   // Preload all thumbnails so crossfade is instant
   Object.values(thumbMap).forEach(src => { const img = new Image(); img.src = src; });
