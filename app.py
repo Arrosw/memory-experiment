@@ -145,7 +145,8 @@ def get_phase_row(db, participant_id: int):
             return trial, 'study'
         if 'immediate' not in done:
             return trial, 'immediate'
-        days = (now - parse_ts(trial['study_started_at'])).days
+        study_date = parse_ts(trial['study_started_at']).date()
+        days = (now.date() - study_date).days
         if 'day' not in done and (DEBUG_SKIP_WINDOWS or DAY_WINDOW[0] <= days <= DAY_WINDOW[1]):
             return trial, 'day'
         if '3day' not in done and (DEBUG_SKIP_WINDOWS or DAY3_WINDOW[0] <= days <= DAY3_WINDOW[1]):
