@@ -17,6 +17,7 @@ MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
     'glass': '#E0F7FA', 'ceramic': '#FFCCBC', 'stone': '#9E9E9E',
 }
+DIFFUSION_CATEGORIES = ('vase', 'bowl', 'mug', 'pitcher', 'tray')
 PHASE_ORDER = ('immediate', 'day', '3day', 'week', '2week', '3week', '4week')
 PHASES = {'immediate', 'day', '3day', 'week', '2week', '3week', '4week'}
 app = Flask(__name__)
@@ -425,12 +426,12 @@ def build_diffusion_chart(db):
     for row in rows:
         if row['phase'] not in grouped:
             continue
-        if row['category'] not in CATEGORIES or row['resp_category'] not in CATEGORIES:
+        if row['category'] not in DIFFUSION_CATEGORIES or row['resp_category'] not in DIFFUSION_CATEGORIES:
             continue
         if row['material'] not in MATERIALS or row['resp_material'] not in MATERIALS:
             continue
         grouped[row['phase']].append({
-            'x': CATEGORIES.index(row['resp_category']) - CATEGORIES.index(row['category']),
+            'x': DIFFUSION_CATEGORIES.index(row['resp_category']) - DIFFUSION_CATEGORIES.index(row['category']),
             'y': MATERIALS.index(row['resp_material']) - MATERIALS.index(row['material']),
         })
     labels = {'immediate': '即时', 'day': '1天', '3day': '3天', 'week': '1周', '2week': '2周', '3week': '3周', '4week': '4周'}
