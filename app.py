@@ -18,7 +18,10 @@ MATERIAL_COLORS = {
     'glass': '#E0F7FA', 'ceramic': '#FFCCBC', 'stone': '#9E9E9E',
 }
 DIFFUSION_CATEGORIES = ('vase', 'bowl', 'mug', 'pitcher', 'tray')
+DOG_DIFFUSION_BREEDS = ('german shepherd', 'husky', 'shiba inu', 'labrador', 'golden retriever')
+DOG_DIFFUSION_BACKGROUNDS = ('sand_ground', 'dusty_ground', 'dry_grassy_ground', 'slightly_damp_dirt', 'fine_gravel_ground')
 PHASE_ORDER = ('immediate', 'day', '3day', 'week', '2week', '3week', '4week')
+PHASE_LABELS = {'immediate': '即时', 'day': '1天', '3day': '3天', 'week': '1周', '2week': '2周', '3week': '3周', '4week': '4周'}
 PHASES = {'immediate', 'day', '3day', 'week', '2week', '3week', '4week'}
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
@@ -416,26 +419,57 @@ def _diffusion_summary(points):
     return {'n': n, 'points': points, 'mean': {'x': _round_or_none(mean_x), 'y': _round_or_none(mean_y)}, 'ellipse': ellipse, 'metrics': metrics}
 
 
-def build_diffusion_chart(db):
+def _diffusion_point(row, x_order, y_order):
+    if row['category'] not in x_order or row['resp_category'] not in x_order:
+        return None
+    if row['material'] not in y_order or row['resp_material'] not in y_order:
+        return None
+    return {
+        'x': x_order.index(row['resp_category']) - x_order.index(row['category']),
+        'y': y_order.index(row['resp_material']) - y_order.index(row['material']),
+        'source': row['trial_type'],
+    }
+
+
+def _diffusion_chart(key, title, note, x_label, y_label, grouped):
+    return {
+        'key': key,
+        'title': title,
+        'note': note,
+        'x_label': x_label,
+        'y_label': y_label,
+        'phases': [{'key': ph, 'label': PHASE_LABELS[ph], **_diffusion_summary(grouped[ph])} for ph in PHASE_ORDER],
+    }
+
+
+def build_diffusion_charts(db):
     rows = db.execute(
-        "SELECT r.phase, t.category, t.material, r.resp_category, r.resp_material "
+        "SELECT r.phase, t.trial_type, t.category, t.material, r.resp_category, r.resp_material "
         "FROM responses r JOIN trials t ON r.trial_id = t.id "
-        "WHERE t.trial_type = 'object' AND r.resp_category IS NOT NULL AND r.resp_material IS NOT NULL"
+        "WHERE r.resp_category IS NOT NULL AND r.resp_material IS NOT NULL"
     ).fetchall()
-    grouped = {phase: [] for phase in PHASE_ORDER}
+    grouped = {
+        'object': {phase: [] for phase in PHASE_ORDER},
+        'dog': {phase: [] for phase in PHASE_ORDER},
+        'combined': {phase: [] for phase in PHASE_ORDER},
+    }
+    orders = {
+        'object': (DIFFUSION_CATEGORIES, tuple(MATERIALS)),
+        'dog': (DOG_DIFFUSION_BREEDS, DOG_DIFFUSION_BACKGROUNDS),
+    }
     for row in rows:
-        if row['phase'] not in grouped:
+        if row['phase'] not in PHASE_ORDER or row['trial_type'] not in orders:
             continue
-        if row['category'] not in DIFFUSION_CATEGORIES or row['resp_category'] not in DIFFUSION_CATEGORIES:
+        point = _diffusion_point(row, *orders[row['trial_type']])
+        if point is None:
             continue
-        if row['material'] not in MATERIALS or row['resp_material'] not in MATERIALS:
-            continue
-        grouped[row['phase']].append({
-            'x': DIFFUSION_CATEGORIES.index(row['resp_category']) - DIFFUSION_CATEGORIES.index(row['category']),
-            'y': MATERIALS.index(row['resp_material']) - MATERIALS.index(row['material']),
-        })
-    labels = {'immediate': '即时', 'day': '1天', '3day': '3天', 'week': '1周', '2week': '2周', '3week': '3周', '4week': '4周'}
-    return {'labels': labels, 'phases': [{'key': ph, 'label': labels[ph], **_diffusion_summary(grouped[ph])} for ph in PHASE_ORDER]}
+        grouped[row['trial_type']][row['phase']].append(point)
+        grouped['combined'][row['phase']].append(point)
+    return [
+        _diffusion_chart('object', '物体记忆弥散图', '横轴是物体类别偏差，纵轴是材质偏差。类别顺序：vase → bowl → mug → pitcher → tray。', '类别偏差', '材质偏差', grouped['object']),
+        _diffusion_chart('dog', '狗记忆弥散图', '横轴是狗品种偏差，纵轴是背景偏差。品种顺序：german shepherd → husky → shiba inu → labrador → golden retriever。', '狗品种偏差', '背景偏差', grouped['dog']),
+        _diffusion_chart('combined', '总体记忆弥散图', '合并物体和狗 trial：横轴统一为低频语义偏差，纵轴统一为高频表面偏差。', '低频偏差', '高频偏差', grouped['combined']),
+    ]
 
 
 @app.get('/admin')
@@ -566,7 +600,7 @@ def admin():
         obj_phase_counts={r['phase']: r['c'] for r in obj_phase_counts},
         dog_phase_counts={r['phase']: r['c'] for r in dog_phase_counts},
         chart_data=chart_data,
-        diffusion_chart=build_diffusion_chart(db),
+        diffusion_charts=build_diffusion_charts(db),
         debug_skip=DEBUG_SKIP_WINDOWS,
     )
 

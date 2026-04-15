@@ -1,3 +1,8 @@
+## 2026-04-15 — Add Dog And Combined Diffusion Charts
+- Added separate admin diffusion charts for dog breed/background trials and for combined object plus dog trials.
+- Uses the agreed dog breed order `german shepherd, husky, shiba inu, labrador, golden retriever`.
+- Uses the agreed background order `sand_ground, dusty_ground, dry_grassy_ground, slightly_damp_dirt, fine_gravel_ground`.
+
 ## 2026-04-15 — Adjust Diffusion Category Order
 - Changed the admin diffusion chart category coding to `vase, bowl, mug, pitcher, tray` so visually similar vase and bowl responses are adjacent in the offset space.
 - Kept the experiment configuration and recall UI order unchanged.
