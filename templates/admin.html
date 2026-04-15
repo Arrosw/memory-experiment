@@ -16,6 +16,10 @@
     display: block;
     min-height: 300px;
   }
+  .evolution-canvas {
+    display: block;
+    min-height: 420px;
+  }
   .diffusion-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
@@ -129,6 +133,14 @@
     <p>合并物体和狗 trial：数值越低表示越接近目标、越好记。若橙线持续高于蓝线，说明材质/背景这类高频表面信息比类别/品种这类低频语义信息更容易发散。</p>
     <div class="diffusion-scroll">
       <canvas id="diffusion-trend-canvas" class="trend-canvas" aria-label="低频与高频弥散趋势"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>记忆弥散时间演化图</h2>
+    <p>合并物体和狗 trial：把不同时间点的总体椭圆画在同一张低频/高频偏差空间里。若记忆随时间衰退，椭圆应逐渐变大；若高频更容易忘，椭圆应主要沿纵轴拉长。</p>
+    <div class="diffusion-scroll">
+      <canvas id="diffusion-evolution-canvas" class="evolution-canvas" aria-label="记忆弥散时间演化图"></canvas>
     </div>
   </div>
 
@@ -372,6 +384,139 @@
         ctx.fillText('平均绝对偏差', width - right, 14);
       };
 
+      const drawEvolution = () => {
+        const chart = charts.find((item) => item.key === 'combined');
+        const canvas = document.getElementById('diffusion-evolution-canvas');
+        if (!canvas || !chart) return;
+        const width = 620;
+        const evolutionHeight = 420;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${evolutionHeight}px`;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(evolutionHeight * dpr);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const plot = {x: 44, y: 32, size: 320};
+        const legendX = plot.x + plot.size + 32;
+        const phaseColors = ['#B8D7FF', '#5AC8FA', '#34C759', '#A6D608', '#FFD60A', '#FF9500', '#FF3B30'];
+        const mapX = (value) => plot.x + ((value + 4.5) / 9) * plot.size;
+        const mapY = (value) => plot.y + ((4.5 - value) / 9) * plot.size;
+        const mapUnit = plot.size / 9;
+
+        drawRoundRect(ctx, 0, 0, width, evolutionHeight, 12);
+        ctx.fillStyle = '#F2F2F7';
+        ctx.fill();
+        drawRoundRect(ctx, plot.x, plot.y, plot.size, plot.size, 12);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(60,60,67,0.14)';
+        ctx.lineWidth = 1;
+        for (let v = -4; v <= 4; v += 1) {
+          ctx.beginPath();
+          ctx.moveTo(mapX(v), plot.y);
+          ctx.lineTo(mapX(v), plot.y + plot.size);
+          ctx.moveTo(plot.x, mapY(v));
+          ctx.lineTo(plot.x + plot.size, mapY(v));
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(60,60,67,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(mapX(0), plot.y);
+        ctx.lineTo(mapX(0), plot.y + plot.size);
+        ctx.moveTo(plot.x, mapY(0));
+        ctx.lineTo(plot.x + plot.size, mapY(0));
+        ctx.stroke();
+
+        const visible = chart.phases.filter((phase) => phase.mean);
+        visible.forEach((phase, index) => {
+          const color = phaseColors[index % phaseColors.length];
+          if (!phase.ellipse) return;
+          const mx = mapX(phase.mean.x);
+          const my = mapY(phase.mean.y);
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(-phase.ellipse.angle);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, phase.ellipse.rx * mapUnit, phase.ellipse.ry * mapUnit, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `${color}26`;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.4;
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        ctx.beginPath();
+        visible.forEach((phase, index) => {
+          const x = mapX(phase.mean.x);
+          const y = mapY(phase.mean.y);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        visible.forEach((phase, index) => {
+          const color = phaseColors[index % phaseColors.length];
+          ctx.beginPath();
+          ctx.arc(mapX(phase.mean.x), mapY(phase.mean.y), 5, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+
+        ctx.fillStyle = 'rgba(60,60,67,0.72)';
+        ctx.textAlign = 'center';
+        ctx.fillText('低频语义偏差', plot.x + plot.size / 2, plot.y + plot.size + 26);
+        ctx.save();
+        ctx.translate(16, plot.y + plot.size / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('高频表面偏差', 0, 0);
+        ctx.restore();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000000';
+        ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        ctx.fillText('阶段图例', legendX, plot.y + 4);
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        chart.phases.forEach((phase, index) => {
+          const y = plot.y + 30 + index * 28;
+          const color = phaseColors[index % phaseColors.length];
+          ctx.beginPath();
+          ctx.arc(legendX + 6, y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(legendX + 20, y);
+          ctx.lineTo(legendX + 54, y);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(0,0,0,0.78)';
+          ctx.fillText(`${phase.label} · n=${phase.n}`, legendX + 64, y);
+        });
+
+        ctx.fillStyle = 'rgba(60,60,67,0.62)';
+        ctx.fillText('彩色椭圆=该阶段 2SD 范围', legendX, plot.y + 250);
+        ctx.fillText('虚线=均值随时间移动轨迹', legendX, plot.y + 272);
+        if (!visible.length) {
+          ctx.textAlign = 'center';
+          ctx.fillStyle = 'rgba(60,60,67,0.45)';
+          ctx.fillText('暂无数据', plot.x + plot.size / 2, plot.y + plot.size / 2);
+        }
+      };
+
       const drawChart = (chart) => {
         const canvas = document.getElementById(`diffusion-canvas-${chart.key}`);
         if (!canvas || !chart || !chart.phases) return;
@@ -396,6 +541,7 @@
       };
 
       drawTrend();
+      drawEvolution();
       charts.forEach(drawChart);
     })();
   </script>

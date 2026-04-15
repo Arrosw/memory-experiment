@@ -1,3 +1,7 @@
+## 2026-04-15 — Add Diffusion Evolution Plot
+- Added an admin evolution chart that overlays combined-trial covariance ellipses from all recall phases in one low-frequency/high-frequency offset space.
+- Includes phase colors, mean points, and a dashed mean trajectory to show how memory diffusion changes over time.
+
 ## 2026-04-15 — Add Low High Diffusion Trend
 - Added an admin trend chart that compares low-frequency semantic drift against high-frequency surface drift over time.
 - Uses the combined object plus dog diffusion metrics so the core memory-stability hypothesis is easier to read before inspecting the ellipse plots.
