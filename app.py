@@ -1,5 +1,6 @@
 import base64
 import csv
+import math
 import os
 import random
 import sqlite3
@@ -16,6 +17,7 @@ MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
     'glass': '#E0F7FA', 'ceramic': '#FFCCBC', 'stone': '#9E9E9E',
 }
+PHASE_ORDER = ('immediate', 'day', '3day', 'week', '2week', '3week', '4week')
 PHASES = {'immediate', 'day', '3day', 'week', '2week', '3week', '4week'}
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
@@ -368,6 +370,73 @@ def return_with_code(code: str):
     return redirect(url_for('study') if phase == 'study' else url_for('recall', phase=phase))
 
 
+def _round_or_none(value):
+    return round(value, 3) if value is not None else None
+
+
+def _ellipse_params(points, mean_x, mean_y):
+    n = len(points)
+    if n < 2:
+        return None
+    var_x = sum((p['x'] - mean_x) ** 2 for p in points) / (n - 1)
+    var_y = sum((p['y'] - mean_y) ** 2 for p in points) / (n - 1)
+    cov = sum((p['x'] - mean_x) * (p['y'] - mean_y) for p in points) / (n - 1)
+    disc = math.sqrt(max(0, (var_x - var_y) ** 2 + 4 * cov * cov))
+    eig_1 = max(0, (var_x + var_y + disc) / 2)
+    eig_2 = max(0, (var_x + var_y - disc) / 2)
+    if eig_1 == 0 and eig_2 == 0:
+        return None
+    return {
+        'rx': _round_or_none(2 * math.sqrt(eig_1)),
+        'ry': _round_or_none(2 * math.sqrt(eig_2)),
+        'angle': _round_or_none(0.5 * math.atan2(2 * cov, var_x - var_y)),
+        'var_category': _round_or_none(var_x),
+        'var_material': _round_or_none(var_y),
+    }
+
+
+def _diffusion_summary(points):
+    n = len(points)
+    if not points:
+        metrics = {'abs_category': None, 'abs_material': None, 'distance': None, 'var_ratio': None}
+        return {'n': 0, 'points': [], 'mean': None, 'ellipse': None, 'metrics': metrics}
+    mean_x = sum(p['x'] for p in points) / n
+    mean_y = sum(p['y'] for p in points) / n
+    ellipse = _ellipse_params(points, mean_x, mean_y)
+    var_x = ellipse['var_category'] if ellipse else None
+    var_y = ellipse['var_material'] if ellipse else None
+    ratio = var_y / var_x if var_x and var_y is not None else None
+    metrics = {
+        'abs_category': _round_or_none(sum(abs(p['x']) for p in points) / n),
+        'abs_material': _round_or_none(sum(abs(p['y']) for p in points) / n),
+        'distance': _round_or_none(sum(math.hypot(p['x'], p['y']) for p in points) / n),
+        'var_ratio': _round_or_none(ratio),
+    }
+    return {'n': n, 'points': points, 'mean': {'x': _round_or_none(mean_x), 'y': _round_or_none(mean_y)}, 'ellipse': ellipse, 'metrics': metrics}
+
+
+def build_diffusion_chart(db):
+    rows = db.execute(
+        "SELECT r.phase, t.category, t.material, r.resp_category, r.resp_material "
+        "FROM responses r JOIN trials t ON r.trial_id = t.id "
+        "WHERE t.trial_type = 'object' AND r.resp_category IS NOT NULL AND r.resp_material IS NOT NULL"
+    ).fetchall()
+    grouped = {phase: [] for phase in PHASE_ORDER}
+    for row in rows:
+        if row['phase'] not in grouped:
+            continue
+        if row['category'] not in CATEGORIES or row['resp_category'] not in CATEGORIES:
+            continue
+        if row['material'] not in MATERIALS or row['resp_material'] not in MATERIALS:
+            continue
+        grouped[row['phase']].append({
+            'x': CATEGORIES.index(row['resp_category']) - CATEGORIES.index(row['category']),
+            'y': MATERIALS.index(row['resp_material']) - MATERIALS.index(row['material']),
+        })
+    labels = {'immediate': '即时', 'day': '1天', '3day': '3天', 'week': '1周', '2week': '2周', '3week': '3周', '4week': '4周'}
+    return {'labels': labels, 'phases': [{'key': ph, 'label': labels[ph], **_diffusion_summary(grouped[ph])} for ph in PHASE_ORDER]}
+
+
 @app.get('/admin')
 def admin():
     if not admin_ok():
@@ -496,6 +565,7 @@ def admin():
         obj_phase_counts={r['phase']: r['c'] for r in obj_phase_counts},
         dog_phase_counts={r['phase']: r['c'] for r in dog_phase_counts},
         chart_data=chart_data,
+        diffusion_chart=build_diffusion_chart(db),
         debug_skip=DEBUG_SKIP_WINDOWS,
     )
 

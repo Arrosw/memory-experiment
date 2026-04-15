@@ -2,6 +2,41 @@
 
 {% block title %}Admin{% endblock %}
 
+{% block head %}
+<style>
+  .diffusion-scroll {
+    overflow-x: auto;
+    padding-bottom: var(--s2);
+  }
+  .diffusion-canvas {
+    display: block;
+    min-height: 252px;
+  }
+  .diffusion-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: var(--s2);
+    margin-top: var(--s4);
+  }
+  .diffusion-chip {
+    background: var(--bg);
+    border-radius: var(--r-sm);
+    padding: var(--s3);
+  }
+  .diffusion-chip strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: var(--s1);
+  }
+  .diffusion-chip span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
   <div class="card">
     <h1>管理面板</h1>
@@ -84,6 +119,142 @@
       </tbody>
     </table>
   </div>
+
+  <div class="card">
+    <h2>记忆弥散图</h2>
+    <p>仅使用物体 trial：横轴是类别偏差，纵轴是材质偏差；所有目标被对齐到原点，椭圆表示该阶段偏差分布的 2SD 协方差范围。</p>
+    <div class="diffusion-scroll">
+      <canvas id="diffusion-canvas" class="diffusion-canvas" aria-label="记忆弥散散点图"></canvas>
+    </div>
+    <div class="diffusion-metrics">
+      {% for row in diffusion_chart.phases %}
+        <div class="diffusion-chip">
+          <strong>{{ row.label }} · n={{ row.n }}</strong>
+          <span>|类别偏差| {{ '%.2f'|format(row.metrics.abs_category) if row.metrics.abs_category is not none else '—' }}</span>
+          <span>|材质偏差| {{ '%.2f'|format(row.metrics.abs_material) if row.metrics.abs_material is not none else '—' }}</span>
+          <span>二维距离 {{ '%.2f'|format(row.metrics.distance) if row.metrics.distance is not none else '—' }}</span>
+          <span>材质/类别方差 {{ '%.2f'|format(row.metrics.var_ratio) if row.metrics.var_ratio is not none else '—' }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const chart = {{ diffusion_chart|tojson }};
+      const canvas = document.getElementById('diffusion-canvas');
+      if (!canvas || !chart || !chart.phases) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const panel = 144;
+      const gap = 16;
+      const padX = 34;
+      const top = 36;
+      const width = chart.phases.length * panel + (chart.phases.length - 1) * gap + padX * 2;
+      const height = 252;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const toX = (x0, value) => x0 + ((value + 4.5) / 9) * panel;
+      const toY = (y0, value) => y0 + ((4.5 - value) / 9) * panel;
+      const unit = panel / 9;
+
+      const jitter = (pointIndex, phaseIndex, axis) => {
+        const seed = Math.sin((pointIndex + 1) * 12.9898 + (phaseIndex + 1) * 78.233 + axis * 37.719) * 43758.5453;
+        return (seed - Math.floor(seed) - 0.5) * 0.18;
+      };
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
+
+      const drawPanel = (phase, phaseIndex) => {
+        const x0 = padX + phaseIndex * (panel + gap);
+        const y0 = top;
+        drawRoundRect(x0, y0, panel, panel, 12);
+        ctx.fillStyle = '#F2F2F7';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(60,60,67,0.18)';
+        ctx.lineWidth = 1;
+        for (let v = -4; v <= 4; v += 2) {
+          ctx.beginPath();
+          ctx.moveTo(toX(x0, v), y0);
+          ctx.lineTo(toX(x0, v), y0 + panel);
+          ctx.moveTo(x0, toY(y0, v));
+          ctx.lineTo(x0 + panel, toY(y0, v));
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(60,60,67,0.48)';
+        ctx.beginPath();
+        ctx.moveTo(toX(x0, 0), y0);
+        ctx.lineTo(toX(x0, 0), y0 + panel);
+        ctx.moveTo(x0, toY(y0, 0));
+        ctx.lineTo(x0 + panel, toY(y0, 0));
+        ctx.stroke();
+
+        phase.points.forEach((point, pointIndex) => {
+          const x = toX(x0, point.x + jitter(pointIndex, phaseIndex, 0));
+          const y = toY(y0, point.y + jitter(pointIndex, phaseIndex, 1));
+          ctx.beginPath();
+          ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,122,255,0.58)';
+          ctx.fill();
+        });
+
+        if (phase.mean && phase.ellipse) {
+          const mx = toX(x0, phase.mean.x);
+          const my = toY(y0, phase.mean.y);
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(-phase.ellipse.angle);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, phase.ellipse.rx * unit, phase.ellipse.ry * unit, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255,149,0,0.9)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (phase.mean) {
+          ctx.beginPath();
+          ctx.arc(toX(x0, phase.mean.x), toY(y0, phase.mean.y), 4.4, 0, Math.PI * 2);
+          ctx.fillStyle = '#FF9500';
+          ctx.fill();
+        }
+
+        if (phase.n === 0) {
+          ctx.fillStyle = 'rgba(60,60,67,0.45)';
+          ctx.fillText('暂无数据', x0 + panel / 2, y0 + panel / 2);
+        }
+
+        ctx.fillStyle = '#000000';
+        ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        ctx.fillText(phase.label, x0 + panel / 2, 18);
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        ctx.fillStyle = 'rgba(60,60,67,0.6)';
+        ctx.fillText(`n=${phase.n}`, x0 + panel / 2, y0 + panel + 18);
+        ctx.fillText('x 类别偏差 · y 材质偏差', x0 + panel / 2, y0 + panel + 34);
+      };
+
+      chart.phases.forEach(drawPanel);
+    })();
+  </script>
 
   <div class="card">
     <h2>最近参与者</h2>
