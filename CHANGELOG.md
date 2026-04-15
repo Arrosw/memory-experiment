@@ -1,3 +1,7 @@
+## 2026-04-15 — Add Low High Diffusion Trend
+- Added an admin trend chart that compares low-frequency semantic drift against high-frequency surface drift over time.
+- Uses the combined object plus dog diffusion metrics so the core memory-stability hypothesis is easier to read before inspecting the ellipse plots.
+
 ## 2026-04-15 — Add Dog And Combined Diffusion Charts
 - Added separate admin diffusion charts for dog breed/background trials and for combined object plus dog trials.
 - Uses the agreed dog breed order `german shepherd, husky, shiba inu, labrador, golden retriever`.

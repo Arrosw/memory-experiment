@@ -12,6 +12,10 @@
     display: block;
     min-height: 252px;
   }
+  .trend-canvas {
+    display: block;
+    min-height: 300px;
+  }
   .diffusion-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
@@ -118,6 +122,14 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <div class="card">
+    <h2>低频与高频弥散趋势</h2>
+    <p>合并物体和狗 trial：数值越低表示越接近目标、越好记。若橙线持续高于蓝线，说明材质/背景这类高频表面信息比类别/品种这类低频语义信息更容易发散。</p>
+    <div class="diffusion-scroll">
+      <canvas id="diffusion-trend-canvas" class="trend-canvas" aria-label="低频与高频弥散趋势"></canvas>
+    </div>
   </div>
 
   {% for chart in diffusion_charts %}
@@ -239,6 +251,127 @@
         ctx.fillText(`x ${chart.x_label} · y ${chart.y_label}`, x0 + panel / 2, y0 + panel + 34);
       };
 
+      const drawTrend = () => {
+        const chart = charts.find((item) => item.key === 'combined');
+        const canvas = document.getElementById('diffusion-trend-canvas');
+        if (!canvas || !chart) return;
+        const width = 620;
+        const trendHeight = 300;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${trendHeight}px`;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(trendHeight * dpr);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const left = 44;
+        const right = 20;
+        const topPad = 28;
+        const bottom = 56;
+        const plotW = width - left - right;
+        const plotH = trendHeight - topPad - bottom;
+        const phases = chart.phases;
+        const low = phases.map((phase) => phase.metrics.abs_category);
+        const high = phases.map((phase) => phase.metrics.abs_material);
+        const values = low.concat(high).filter((value) => value !== null && value !== undefined);
+        const maxY = Math.max(1, Math.ceil(Math.max(...values, 0) * 4) / 4);
+        const xAt = (index) => left + (index / Math.max(1, phases.length - 1)) * plotW;
+        const yAt = (value) => topPad + (1 - value / maxY) * plotH;
+
+        drawRoundRect(ctx, 0, 0, width, trendHeight, 12);
+        ctx.fillStyle = '#F2F2F7';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(60,60,67,0.16)';
+        ctx.lineWidth = 1;
+        for (let tick = 0; tick <= 4; tick += 1) {
+          const value = (maxY / 4) * tick;
+          const y = yAt(value);
+          ctx.beginPath();
+          ctx.moveTo(left, y);
+          ctx.lineTo(width - right, y);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(60,60,67,0.58)';
+          ctx.textAlign = 'right';
+          ctx.fillText(value.toFixed(value % 1 === 0 ? 0 : 2), left - 8, y);
+        }
+
+        ctx.beginPath();
+        let hasArea = false;
+        high.forEach((value, index) => {
+          if (value === null || value === undefined || low[index] === null || low[index] === undefined) return;
+          const x = xAt(index);
+          const y = yAt(value);
+          if (!hasArea) {
+            ctx.moveTo(x, y);
+            hasArea = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        [...low].reverse().forEach((value, reverseIndex) => {
+          const index = low.length - 1 - reverseIndex;
+          if (value === null || value === undefined || high[index] === null || high[index] === undefined) return;
+          ctx.lineTo(xAt(index), yAt(value));
+        });
+        if (hasArea) {
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(255,149,0,0.14)';
+          ctx.fill();
+        }
+
+        const drawLine = (series, color) => {
+          ctx.beginPath();
+          let started = false;
+          series.forEach((value, index) => {
+            if (value === null || value === undefined) return;
+            const x = xAt(index);
+            const y = yAt(value);
+            if (!started) {
+              ctx.moveTo(x, y);
+              started = true;
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          series.forEach((value, index) => {
+            if (value === null || value === undefined) return;
+            ctx.beginPath();
+            ctx.arc(xAt(index), yAt(value), 4, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+          });
+        };
+
+        drawLine(low, '#007AFF');
+        drawLine(high, '#FF9500');
+
+        phases.forEach((phase, index) => {
+          const x = xAt(index);
+          ctx.fillStyle = 'rgba(60,60,67,0.68)';
+          ctx.textAlign = 'center';
+          ctx.fillText(phase.label, x, trendHeight - 34);
+          ctx.fillText(`n=${phase.n}`, x, trendHeight - 18);
+        });
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#007AFF';
+        ctx.fillText('蓝=低频语义偏差', left, 14);
+        ctx.fillStyle = '#FF9500';
+        ctx.fillText('橙=高频表面偏差', left + 118, 14);
+        ctx.fillStyle = 'rgba(60,60,67,0.68)';
+        ctx.textAlign = 'right';
+        ctx.fillText('平均绝对偏差', width - right, 14);
+      };
+
       const drawChart = (chart) => {
         const canvas = document.getElementById(`diffusion-canvas-${chart.key}`);
         if (!canvas || !chart || !chart.phases) return;
@@ -262,6 +395,7 @@
         }
       };
 
+      drawTrend();
       charts.forEach(drawChart);
     })();
   </script>
