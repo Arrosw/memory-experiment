@@ -4,7 +4,7 @@ DOG_BREEDS = ['german shepherd', 'golden retriever', 'husky', 'labrador', 'shiba
 DOG_BACKGROUNDS = ['dry_grassy_ground', 'dusty_ground', 'fine_gravel_ground', 'sand_ground', 'slightly_damp_dirt']
 GENDERS = ['男', '女']
 AGE_GROUPS = ['20岁及以下', '40岁及以下', '40岁以上']
-EDUCATIONS = ['初中及以下', '高中/中专', '本科及以上']
+EDUCATIONS = ['初中及以下', '高中/中专', '大专/本科及以上']
 ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'Deer', 'Lynx',
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
 TRIALS_PER_PARTICIPANT = 1
@@ -26,7 +26,7 @@ def init_db(db):
         nickname TEXT,
         gender TEXT CHECK(gender IN ('男','女')),
         age TEXT CHECK(age IN ('20岁及以下','40岁及以下','40岁以上')),
-        education TEXT CHECK(education IN ('初中及以下','高中/中专','本科及以上')),
+        education TEXT CHECK(education IN ('初中及以下','高中/中专','大专/本科及以上')),
         created_at TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS trials (
@@ -64,13 +64,53 @@ def init_db(db):
     for sql in (
         "ALTER TABLE participants ADD COLUMN gender TEXT CHECK(gender IN ('男','女'))",
         "ALTER TABLE participants ADD COLUMN age TEXT CHECK(age IN ('20岁及以下','40岁及以下','40岁以上'))",
-        "ALTER TABLE participants ADD COLUMN education TEXT CHECK(education IN ('初中及以下','高中/中专','本科及以上'))",
+        "ALTER TABLE participants ADD COLUMN education TEXT CHECK(education IN ('初中及以下','高中/中专','大专/本科及以上'))",
     ):
         try:
             db.execute(sql)
             db.commit()
         except Exception:
             pass  # column already exists
+    participant_schema = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='participants'").fetchone()
+    if participant_schema and ("'本科及以上'" in participant_schema['sql'] or "age INTEGER" in participant_schema['sql']):
+        try:
+            db.execute("""CREATE TABLE participants_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              code TEXT UNIQUE NOT NULL,
+              nickname TEXT,
+              gender TEXT CHECK(gender IN ('男','女')),
+              age TEXT CHECK(age IN ('20岁及以下','40岁及以下','40岁以上')),
+              education TEXT CHECK(education IN ('初中及以下','高中/中专','大专/本科及以上')),
+              created_at TIMESTAMP
+          )""")
+            db.execute("""
+                INSERT INTO participants_new (id, code, nickname, gender, age, education, created_at)
+                SELECT
+                    id,
+                    code,
+                    nickname,
+                    CASE WHEN gender IN ('男','女') THEN gender ELSE NULL END,
+                    CASE
+                        WHEN age IN ('20岁及以下','40岁及以下','40岁以上') THEN age
+                        WHEN CAST(age AS TEXT) != '' AND CAST(age AS TEXT) NOT GLOB '*[^0-9]*' AND CAST(age AS INTEGER) <= 20 THEN '20岁及以下'
+                        WHEN CAST(age AS TEXT) != '' AND CAST(age AS TEXT) NOT GLOB '*[^0-9]*' AND CAST(age AS INTEGER) <= 40 THEN '40岁及以下'
+                        WHEN CAST(age AS TEXT) != '' AND CAST(age AS TEXT) NOT GLOB '*[^0-9]*' THEN '40岁以上'
+                        ELSE NULL
+                    END,
+                    CASE
+                        WHEN education = '本科及以上' THEN '大专/本科及以上'
+                        WHEN education IN ('初中及以下','高中/中专','大专/本科及以上') THEN education
+                        ELSE NULL
+                    END,
+                    created_at
+                FROM participants
+            """)
+            db.execute("DROP TABLE participants")
+            db.execute("ALTER TABLE participants_new RENAME TO participants")
+            db.execute("CREATE INDEX IF NOT EXISTS idx_part_code ON participants(code)")
+            db.commit()
+        except Exception:
+            db.rollback()
     try:
         db.execute("""
             UPDATE participants

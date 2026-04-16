@@ -1,3 +1,7 @@
+## 2026-04-16 — Rename Higher Education Option
+- Renamed the highest education choice from 本科及以上 to 大专/本科及以上.
+- Added startup migration so existing participant rows and SQLite CHECK constraints accept the new label.
+
 ## 2026-04-16 — Use Age Group Registration
 - Replaced free-text numeric age entry with fixed age group choices: 20岁及以下, 40岁及以下, and 40岁以上.
 - Updated admin demographic statistics to report age groups in the same format as gender and education.
