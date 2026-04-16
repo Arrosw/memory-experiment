@@ -1,3 +1,9 @@
+## 2026-04-16 — Finalize Four Phase Demographics
+- Added required registration demographics for name, gender, age, and education.
+- Switched experiment timing to Beijing time for registration, study start, and recall responses.
+- Updated admin demographics to report complete-round counts and four accuracy measures: object low-frequency, object high-frequency, biological low-frequency, and biological high-frequency.
+- Reduced the final recall schedule to immediate, 1 day, 1 week, and 2 weeks.
+
 ## 2026-04-15 — Add Diffusion Evolution Plot
 - Added an admin evolution chart that overlays combined-trial covariance ellipses from all recall phases in one low-frequency/high-frequency offset space.
 - Includes phase colors, mean points, and a dashed mean trajectory to show how memory diffusion changes over time.

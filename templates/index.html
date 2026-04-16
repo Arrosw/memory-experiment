@@ -5,14 +5,14 @@
 {% block content %}
   <div class="card">
     <h1>记忆研究</h1>
-    <p style="margin-bottom:var(--s4);">本研究探究人们对图像细节的长期记忆。参与全程约需 <strong>7 次</strong>短暂访问，每次不超过 3 分钟。</p>
+    <p style="margin-bottom:var(--s4);">本研究探究人们对图像细节的长期记忆。参与全程约需 <strong>4 次</strong>短暂访问，每次不超过 3 分钟。</p>
     <div style="background:var(--bg);border-radius:var(--r-sm);padding:var(--s4) var(--s5);margin-bottom:var(--s4);">
       <p style="margin:0 0 var(--s2);font-weight:600;">实验流程</p>
       <ol style="margin:0;padding-left:20px;line-height:1.8;">
         <li>注册后，你将依次看到 <strong>两张图像</strong>（物体各一张、狗各一张），每张展示 3 秒，请仔细记忆。</li>
         <li>随即进行 <strong>即时回忆</strong>：在坐标轴上拖动蓝点，找到和你记忆中最相近的图像，然后确认。</li>
         <li>之后请保存你的 <strong>参与码</strong>，在以下时间点返回完成回忆测试：
-          <span style="display:block;margin-top:var(--s1);padding-left:4px;color:var(--text-secondary);">1 天后 · 3 天后 · 1 周后 · 2 周后 · 3 周后 · 4 周后</span>
+          <span style="display:block;margin-top:var(--s1);padding-left:4px;color:var(--text-secondary);">1 天后 · 1 周后 · 2 周后</span>
         </li>
       </ol>
     </div>
@@ -21,7 +21,23 @@
 
   <div class="card">
     <form method="post" action="/register">
-      <input class="input" type="text" name="nickname" placeholder="初次登录请输入昵称（可选）" autocomplete="nickname">
+      {% if error %}
+        <p style="color:var(--red);font-size:14px;margin-bottom:var(--s3);">{{ error }}</p>
+      {% endif %}
+      <input class="input" type="text" name="nickname" placeholder="初次登录请输入姓名" autocomplete="name" value="{{ form.nickname if form else '' }}" required>
+      <select class="input mt-4" name="gender" required>
+        <option value="">请选择性别</option>
+        {% for gender in genders %}
+          <option value="{{ gender }}" {% if form and form.gender == gender %}selected{% endif %}>{{ gender }}</option>
+        {% endfor %}
+      </select>
+      <input class="input mt-4" type="number" name="age" placeholder="请输入年龄" min="1" max="120" inputmode="numeric" value="{{ form.age if form else '' }}" required>
+      <select class="input mt-4" name="education" required>
+        <option value="">请选择学历</option>
+        {% for education in educations %}
+          <option value="{{ education }}" {% if form and form.education == education %}selected{% endif %}>{{ education }}</option>
+        {% endfor %}
+      </select>
       <button class="btn mt-4" type="submit" style="width:100%;">开始实验</button>
     </form>
 

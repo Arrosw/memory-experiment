@@ -56,6 +56,106 @@
   </div>
 
   <div class="card">
+    <h2>人口学统计</h2>
+    <p style="font-size:14px;margin-bottom:var(--s4);">作答次数按同一参与者同一阶段的物体和狗都完成计 1 次。</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-bottom:var(--s4);">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats.gender_counts %}
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-bottom:var(--s4);">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats.education_counts %}
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-bottom:0;">
+      年龄样本：<strong>{{ stats.age_summary.c or 0 }}</strong>，
+      平均：<strong>{{ '%.1f'|format(stats.age_summary.avg_age) if stats.age_summary.avg_age is not none else '—' }}</strong>，
+      最小/最大：<strong>{{ stats.age_summary.min_age if stats.age_summary.min_age is not none else '—' }} / {{ stats.age_summary.max_age if stats.age_summary.max_age is not none else '—' }}</strong>
+    </p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-top:var(--s4);">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
+            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats.age_counts %}
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
+              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>物体准确率</h2>
     <table style="width:100%;border-collapse:collapse;">
       <thead>
@@ -67,7 +167,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', 'week', '2week'] %}
           {% set row = obj_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -92,7 +192,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', 'week', '2week'] %}
           {% set row = dog_acc_map.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -116,7 +216,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week'] %}
+        {% for ph in ['immediate', 'day', 'week', '2week'] %}
           {% set row = total_acc.get(ph) %}
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ ph }}</td>
@@ -552,7 +652,10 @@
       <thead>
         <tr>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
-          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">昵称</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">姓名</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">注册时间</th>
         </tr>
       </thead>
@@ -561,10 +664,13 @@
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);font-family:ui-monospace,monospace;">{{ row.code }}</td>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.nickname or '—' }}</td>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.gender or '—' }}</td>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.age if row.age is not none else '—' }}</td>
+            <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.education or '—' }}</td>
             <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.created_at }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="3" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
+          <tr><td colspan="6" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -576,20 +682,20 @@
   <div class="card">
     <h2>每位参与者明细</h2>
     <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:1980px;">
+      <table style="width:100%;border-collapse:collapse;min-width:1580px;">
         <thead>
           <tr>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">昵称</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">姓名</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">类型</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">物体/狗</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">即时（时长/类别/属性）</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一天</th>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">三天</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">一周</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">两周</th>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">三周</th>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">四周</th>
           </tr>
         </thead>
         <tbody>
@@ -597,28 +703,28 @@
             <tr>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);font-family:ui-monospace,monospace;">{{ row.code }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.nickname or '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.gender or '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.age if row.age is not none else '—' }}</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.education or '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">物体</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.category }} {{ row.object.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.immediate.elapsed_label }} / {{ (row.object.immediate.resp_cat ~ ('✓' if row.object.immediate.cat_ok == 1 else '✗')) if row.object.immediate.resp_cat else '—' }} / {{ (row.object.immediate.resp_mat ~ ('✓' if row.object.immediate.mat_ok == 1 else '✗')) if row.object.immediate.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.day.elapsed_label }} / {{ (row.object.day.resp_cat ~ ('✓' if row.object.day.cat_ok == 1 else '✗')) if row.object.day.resp_cat else '—' }} / {{ (row.object.day.resp_mat ~ ('✓' if row.object.day.mat_ok == 1 else '✗')) if row.object.day.resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['3day'].elapsed_label }} / {{ (row.object['3day'].resp_cat ~ ('✓' if row.object['3day'].cat_ok == 1 else '✗')) if row.object['3day'].resp_cat else '—' }} / {{ (row.object['3day'].resp_mat ~ ('✓' if row.object['3day'].mat_ok == 1 else '✗')) if row.object['3day'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object.week.elapsed_label }} / {{ (row.object.week.resp_cat ~ ('✓' if row.object.week.cat_ok == 1 else '✗')) if row.object.week.resp_cat else '—' }} / {{ (row.object.week.resp_mat ~ ('✓' if row.object.week.mat_ok == 1 else '✗')) if row.object.week.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['2week'].elapsed_label }} / {{ (row.object['2week'].resp_cat ~ ('✓' if row.object['2week'].cat_ok == 1 else '✗')) if row.object['2week'].resp_cat else '—' }} / {{ (row.object['2week'].resp_mat ~ ('✓' if row.object['2week'].mat_ok == 1 else '✗')) if row.object['2week'].resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['3week'].elapsed_label }} / {{ (row.object['3week'].resp_cat ~ ('✓' if row.object['3week'].cat_ok == 1 else '✗')) if row.object['3week'].resp_cat else '—' }} / {{ (row.object['3week'].resp_mat ~ ('✓' if row.object['3week'].mat_ok == 1 else '✗')) if row.object['3week'].resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.object['4week'].elapsed_label }} / {{ (row.object['4week'].resp_cat ~ ('✓' if row.object['4week'].cat_ok == 1 else '✗')) if row.object['4week'].resp_cat else '—' }} / {{ (row.object['4week'].resp_mat ~ ('✓' if row.object['4week'].mat_ok == 1 else '✗')) if row.object['4week'].resp_mat else '—' }}</td>
             </tr>
             <tr>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);color:var(--text-tertiary);font-family:ui-monospace,monospace;">↳</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);color:var(--text-tertiary);">—</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);color:var(--text-tertiary);">—</td>
+              <td style="padding:12px 0;border-bottom:1px solid var(--separator);color:var(--text-tertiary);">—</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);color:var(--text-tertiary);">—</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">狗</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.category }} {{ row.dog.material }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.immediate.elapsed_label }} / {{ (row.dog.immediate.resp_cat ~ ('✓' if row.dog.immediate.cat_ok == 1 else '✗')) if row.dog.immediate.resp_cat else '—' }} / {{ (row.dog.immediate.resp_mat ~ ('✓' if row.dog.immediate.mat_ok == 1 else '✗')) if row.dog.immediate.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.day.elapsed_label }} / {{ (row.dog.day.resp_cat ~ ('✓' if row.dog.day.cat_ok == 1 else '✗')) if row.dog.day.resp_cat else '—' }} / {{ (row.dog.day.resp_mat ~ ('✓' if row.dog.day.mat_ok == 1 else '✗')) if row.dog.day.resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['3day'].elapsed_label }} / {{ (row.dog['3day'].resp_cat ~ ('✓' if row.dog['3day'].cat_ok == 1 else '✗')) if row.dog['3day'].resp_cat else '—' }} / {{ (row.dog['3day'].resp_mat ~ ('✓' if row.dog['3day'].mat_ok == 1 else '✗')) if row.dog['3day'].resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog.week.elapsed_label }} / {{ (row.dog.week.resp_cat ~ ('✓' if row.dog.week.cat_ok == 1 else '✗')) if row.dog.week.resp_cat else '—' }} / {{ (row.dog.week.resp_mat ~ ('✓' if row.dog.week.mat_ok == 1 else '✗')) if row.dog.week.resp_mat else '—' }}</td>
               <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['2week'].elapsed_label }} / {{ (row.dog['2week'].resp_cat ~ ('✓' if row.dog['2week'].cat_ok == 1 else '✗')) if row.dog['2week'].resp_cat else '—' }} / {{ (row.dog['2week'].resp_mat ~ ('✓' if row.dog['2week'].mat_ok == 1 else '✗')) if row.dog['2week'].resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['3week'].elapsed_label }} / {{ (row.dog['3week'].resp_cat ~ ('✓' if row.dog['3week'].cat_ok == 1 else '✗')) if row.dog['3week'].resp_cat else '—' }} / {{ (row.dog['3week'].resp_mat ~ ('✓' if row.dog['3week'].mat_ok == 1 else '✗')) if row.dog['3week'].resp_mat else '—' }}</td>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.dog['4week'].elapsed_label }} / {{ (row.dog['4week'].resp_cat ~ ('✓' if row.dog['4week'].cat_ok == 1 else '✗')) if row.dog['4week'].resp_cat else '—' }} / {{ (row.dog['4week'].resp_mat ~ ('✓' if row.dog['4week'].mat_ok == 1 else '✗')) if row.dog['4week'].resp_mat else '—' }}</td>
             </tr>
           {% else %}
             <tr><td colspan="11" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>

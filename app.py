@@ -11,7 +11,7 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DAY3_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, WEEK3_WINDOW, WEEK4_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, EDUCATIONS, GENDERS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
@@ -20,11 +20,20 @@ MATERIAL_COLORS = {
 DIFFUSION_CATEGORIES = ('vase', 'bowl', 'mug', 'pitcher', 'tray')
 DOG_DIFFUSION_BREEDS = ('german shepherd', 'husky', 'shiba inu', 'labrador', 'golden retriever')
 DOG_DIFFUSION_BACKGROUNDS = ('sand_ground', 'dusty_ground', 'dry_grassy_ground', 'slightly_damp_dirt', 'fine_gravel_ground')
-PHASE_ORDER = ('immediate', 'day', '3day', 'week', '2week', '3week', '4week')
-PHASE_LABELS = {'immediate': '即时', 'day': '1天', '3day': '3天', 'week': '1周', '2week': '2周', '3week': '3周', '4week': '4周'}
-PHASES = {'immediate', 'day', '3day', 'week', '2week', '3week', '4week'}
+PHASE_ORDER = ('immediate', 'day', 'week', '2week')
+PHASE_LABELS = {'immediate': '即时', 'day': '1天', 'week': '1周', '2week': '2周'}
+PHASES = set(PHASE_ORDER)
+BEIJING_TZ = timezone(timedelta(hours=8))
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-fallback-key')
+
+
+def beijing_now() -> datetime:
+    return datetime.now(BEIJING_TZ)
+
+
+def beijing_timestamp() -> str:
+    return beijing_now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def scan_available():
@@ -139,12 +148,12 @@ def assign_trials(db, participant_id: int) -> None:
 def parse_ts(value):
     if not value:
         return None
-    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S').replace(tzinfo=BEIJING_TZ)
 
 
 def get_phase_row(db, participant_id: int):
     trials = db.execute("SELECT * FROM trials WHERE participant_id=? ORDER BY trial_order, id", (participant_id,)).fetchall()
-    now = datetime.now(timezone.utc)
+    now = beijing_now()
     for trial in trials:
         done = {r['phase'] for r in db.execute("SELECT phase FROM responses WHERE trial_id=?", (trial['id'],)).fetchall()}
         if not trial['study_started_at']:
@@ -155,16 +164,10 @@ def get_phase_row(db, participant_id: int):
         days = (now.date() - study_date).days
         if 'day' not in done and (DEBUG_SKIP_WINDOWS or DAY_WINDOW[0] <= days <= DAY_WINDOW[1]):
             return trial, 'day'
-        if '3day' not in done and (DEBUG_SKIP_WINDOWS or DAY3_WINDOW[0] <= days <= DAY3_WINDOW[1]):
-            return trial, '3day'
         if 'week' not in done and (DEBUG_SKIP_WINDOWS or WEEK_WINDOW[0] <= days <= WEEK_WINDOW[1]):
             return trial, 'week'
-        if '2week' not in done and (DEBUG_SKIP_WINDOWS or WEEK2_WINDOW[0] <= days <= WEEK2_WINDOW[1]):
+        if '2week' not in done and (DEBUG_SKIP_WINDOWS or days >= WEEK2_WINDOW[0]):
             return trial, '2week'
-        if '3week' not in done and (DEBUG_SKIP_WINDOWS or WEEK3_WINDOW[0] <= days <= WEEK3_WINDOW[1]):
-            return trial, '3week'
-        if '4week' not in done and (DEBUG_SKIP_WINDOWS or days >= WEEK4_WINDOW[0]):
-            return trial, '4week'
     return None, None
 
 
@@ -206,14 +209,43 @@ def current_trial_for_study(db, participant_id: int):
 
 @app.get('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', genders=GENDERS, educations=EDUCATIONS)
 
 
 @app.post('/register')
 def register():
     db = get_db()
     code = generate_code(db)
-    db.execute("INSERT INTO participants (code, nickname) VALUES (?,?)", (code, request.form.get('nickname', '').strip() or None))
+    nickname = request.form.get('nickname', '').strip()
+    gender = request.form.get('gender', '').strip()
+    age_raw = request.form.get('age', '').strip()
+    education = request.form.get('education', '').strip()
+    error = None
+    try:
+        age = int(age_raw)
+    except ValueError:
+        age = None
+        error = '请填写有效年龄'
+    if not nickname:
+        error = '请填写姓名'
+    elif gender not in GENDERS:
+        error = '请选择性别'
+    elif age is None or age < 1 or age > 120:
+        error = '请填写有效年龄'
+    elif education not in EDUCATIONS:
+        error = '请选择学历'
+    if error:
+        return render_template(
+            'index.html',
+            error=error,
+            form={'nickname': nickname, 'gender': gender, 'age': age_raw, 'education': education},
+            genders=GENDERS,
+            educations=EDUCATIONS,
+        ), 400
+    db.execute(
+        "INSERT INTO participants (code, nickname, gender, age, education, created_at) VALUES (?,?,?,?,?,?)",
+        (code, nickname, gender, age, education, beijing_timestamp()),
+    )
     db.commit()
     participant_id = db.execute("SELECT id FROM participants WHERE code=?", (code,)).fetchone()['id']
     assign_trials(db, participant_id)
@@ -246,7 +278,7 @@ def study_start():
         return jsonify({'ok': False}), 401
     trial = current_trial_for_study(get_db(), pid)
     if trial:
-        get_db().execute("UPDATE trials SET study_started_at=COALESCE(study_started_at, CURRENT_TIMESTAMP) WHERE id=?", (trial['id'],))
+        get_db().execute("UPDATE trials SET study_started_at=COALESCE(study_started_at, ?) WHERE id=?", (beijing_timestamp(), trial['id']))
         get_db().commit()
     return jsonify({'ok': True})
 
@@ -303,8 +335,8 @@ def save_recall(phase: str):
     resp_material = avail_mats[x_order[xi]]
     resp_category = avail_cats[y_order[yi]]
     db.execute(
-        "INSERT INTO responses (trial_id, phase, resp_category, resp_material, resp_col, resp_row, category_correct, material_correct, response_time_ms) VALUES (?,?,?,?,?,?,?,?,?)",
-        (trial['id'], phase, resp_category, resp_material, x_order[xi], y_order[yi], int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))
+        "INSERT INTO responses (trial_id, phase, responded_at, resp_category, resp_material, resp_col, resp_row, category_correct, material_correct, response_time_ms) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (trial['id'], phase, beijing_timestamp(), resp_category, resp_material, x_order[xi], y_order[yi], int(resp_category == trial['category']), int(resp_material == trial['material']), data.get('response_time_ms'))
     )
     db.commit()
     next_trial, next_phase = get_phase_row(db, pid)
@@ -325,11 +357,8 @@ def done():
     progress = [
         {'key': 'immediate', 'label': '即时', 'done': False, 'note': ''},
         {'key': 'day',       'label': '',      'done': False, 'note': ''},
-        {'key': '3day',      'label': '',      'done': False, 'note': ''},
         {'key': 'week',      'label': '',      'done': False, 'note': ''},
         {'key': '2week',     'label': '',      'done': False, 'note': ''},
-        {'key': '3week',     'label': '',      'done': False, 'note': ''},
-        {'key': '4week',     'label': '',      'done': False, 'note': ''},
     ]
     if pid:
         db = get_db()
@@ -349,8 +378,8 @@ def done():
             first_trial = trials[0]
             if first_trial['study_started_at']:
                 started = parse_ts(first_trial['study_started_at'])
-                today = datetime.now(timezone.utc).date()
-                for key, offset in [('day', DAY_WINDOW[0]), ('3day', DAY3_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('2week', WEEK2_WINDOW[0]), ('3week', WEEK3_WINDOW[0]), ('4week', WEEK4_WINDOW[0])]:
+                today = beijing_now().date()
+                for key, offset in [('day', DAY_WINDOW[0]), ('week', WEEK_WINDOW[0]), ('2week', WEEK2_WINDOW[0])]:
                     entry = next(x for x in progress if x['key'] == key)
                     if not entry['done']:
                         target = (started + timedelta(days=offset)).date()
@@ -510,6 +539,78 @@ def admin():
         "SELECT r.phase, AVG(r.category_correct) ac, AVG(r.material_correct) am "
         "FROM responses r JOIN trials t ON r.trial_id = t.id WHERE t.trial_type = 'dog' GROUP BY r.phase"
     ).fetchall()
+    gender_rows = db.execute(
+        "SELECT gender, COUNT(*) c FROM participants WHERE gender IS NOT NULL GROUP BY gender ORDER BY gender"
+    ).fetchall()
+    education_rows = db.execute(
+        "SELECT education, COUNT(*) c FROM participants WHERE education IS NOT NULL GROUP BY education ORDER BY education"
+    ).fetchall()
+    age_rows = db.execute(
+        "SELECT age, COUNT(*) c FROM participants WHERE age IS NOT NULL GROUP BY age ORDER BY age"
+    ).fetchall()
+    gender_accuracy_rows = db.execute(
+        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
+        "FROM ("
+        "  SELECT p.gender label, p.id participant_id, r.phase, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
+        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
+        "  WHERE p.gender IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.gender, p.id, r.phase"
+        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
+        "GROUP BY label"
+    ).fetchall()
+    education_accuracy_rows = db.execute(
+        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
+        "FROM ("
+        "  SELECT p.education label, p.id participant_id, r.phase, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
+        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
+        "  WHERE p.education IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.education, p.id, r.phase"
+        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
+        "GROUP BY label"
+    ).fetchall()
+    age_accuracy_rows = db.execute(
+        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
+        "FROM ("
+        "  SELECT p.age label, p.id participant_id, r.phase, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
+        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
+        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
+        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
+        "  WHERE p.age IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.age, p.id, r.phase"
+        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
+        "GROUP BY label ORDER BY label"
+    ).fetchall()
+
+    def demo_row(label, participant_count, accuracy_row):
+        return {
+            'label': label,
+            'participant_count': participant_count,
+            'response_count': accuracy_row['response_count'] if accuracy_row else 0,
+            'object_low': accuracy_row['object_low'] if accuracy_row else None,
+            'object_high': accuracy_row['object_high'] if accuracy_row else None,
+            'bio_low': accuracy_row['bio_low'] if accuracy_row else None,
+            'bio_high': accuracy_row['bio_high'] if accuracy_row else None,
+        }
+
+    gender_map = {row['gender']: row['c'] for row in gender_rows}
+    education_map = {row['education']: row['c'] for row in education_rows}
+    age_map = {row['age']: row['c'] for row in age_rows}
+    gender_accuracy_map = {row['label']: row for row in gender_accuracy_rows}
+    education_accuracy_map = {row['label']: row for row in education_accuracy_rows}
+    age_accuracy_map = {row['label']: row for row in age_accuracy_rows}
+    gender_counts = [demo_row(gender, gender_map.get(gender, 0), gender_accuracy_map.get(gender)) for gender in GENDERS]
+    education_counts = [demo_row(education, education_map.get(education, 0), education_accuracy_map.get(education)) for education in EDUCATIONS]
+    age_counts = [demo_row(age, age_map[age], age_accuracy_map.get(age)) for age in sorted(age_map)]
+    age_summary = db.execute(
+        "SELECT COUNT(age) c, AVG(age) avg_age, MIN(age) min_age, MAX(age) max_age FROM participants WHERE age IS NOT NULL"
+    ).fetchone()
     obj_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in obj_accuracy}
     dog_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in dog_accuracy}
 
@@ -521,7 +622,7 @@ def admin():
         return (a + b) / 2
 
     total_acc = {}
-    for ph in ['immediate', 'day', '3day', 'week', '2week', '3week', '4week']:
+    for ph in PHASE_ORDER:
         o = obj_acc_map.get(ph, {})
         d = dog_acc_map.get(ph, {})
         total_acc[ph] = {
@@ -532,26 +633,20 @@ def admin():
         'cat': [
             round(total_acc['immediate']['low'] * 100, 1) if total_acc.get('immediate', {}).get('low') is not None else None,
             round(total_acc['day']['low'] * 100, 1) if total_acc.get('day', {}).get('low') is not None else None,
-            round(total_acc['3day']['low'] * 100, 1) if total_acc.get('3day', {}).get('low') is not None else None,
             round(total_acc['week']['low'] * 100, 1) if total_acc.get('week', {}).get('low') is not None else None,
             round(total_acc['2week']['low'] * 100, 1) if total_acc.get('2week', {}).get('low') is not None else None,
-            round(total_acc['3week']['low'] * 100, 1) if total_acc.get('3week', {}).get('low') is not None else None,
-            round(total_acc['4week']['low'] * 100, 1) if total_acc.get('4week', {}).get('low') is not None else None,
         ],
         'mat': [
             round(total_acc['immediate']['high'] * 100, 1) if total_acc.get('immediate', {}).get('high') is not None else None,
             round(total_acc['day']['high'] * 100, 1) if total_acc.get('day', {}).get('high') is not None else None,
-            round(total_acc['3day']['high'] * 100, 1) if total_acc.get('3day', {}).get('high') is not None else None,
             round(total_acc['week']['high'] * 100, 1) if total_acc.get('week', {}).get('high') is not None else None,
             round(total_acc['2week']['high'] * 100, 1) if total_acc.get('2week', {}).get('high') is not None else None,
-            round(total_acc['3week']['high'] * 100, 1) if total_acc.get('3week', {}).get('high') is not None else None,
-            round(total_acc['4week']['high'] * 100, 1) if total_acc.get('4week', {}).get('high') is not None else None,
         ],
     }
-    recent = db.execute("SELECT code, nickname, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
+    recent = db.execute("SELECT code, nickname, gender, age, education, created_at FROM participants ORDER BY created_at DESC, id DESC LIMIT 10").fetchall()
     detail_rows = db.execute(
         "SELECT "
-        "p.code, p.nickname, t.id trial_id, t.trial_type, t.category, t.material, r.phase, "
+        "p.code, p.nickname, p.gender, p.age, p.education, t.id trial_id, t.trial_type, t.category, t.material, r.phase, "
         "CAST((julianday(r.responded_at) - julianday(t.study_started_at)) * 86400 AS INTEGER) AS elapsed_seconds, "
         "r.category_correct, r.material_correct, r.resp_category, r.resp_material "
         "FROM participants p "
@@ -572,8 +667,11 @@ def admin():
             row_map[code] = {
                 'code': row['code'],
                 'nickname': row['nickname'],
-                'object': {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), '3day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
-                'dog':    {'category': '', 'material': '', 'immediate': default_phase(), 'day': default_phase(), '3day': default_phase(), 'week': default_phase(), '2week': default_phase(), '3week': default_phase(), '4week': default_phase()},
+                'gender': row['gender'],
+                'age': row['age'],
+                'education': row['education'],
+                'object': {**{'category': '', 'material': ''}, **{phase: default_phase() for phase in PHASE_ORDER}},
+                'dog':    {**{'category': '', 'material': ''}, **{phase: default_phase() for phase in PHASE_ORDER}},
             }
             per_user.append(row_map[code])
         tt = row['trial_type']
@@ -589,7 +687,16 @@ def admin():
                     'resp_mat': row['resp_material'],
                 }
 
-    stats = {'total_participants': total, 'phase_counts': phase_counts, 'accuracy': accuracy, 'recent': recent}
+    stats = {
+        'total_participants': total,
+        'phase_counts': phase_counts,
+        'accuracy': accuracy,
+        'recent': recent,
+        'gender_counts': gender_counts,
+        'education_counts': education_counts,
+        'age_counts': age_counts,
+        'age_summary': age_summary,
+    }
     return render_template(
         'admin.html',
         stats=stats,
@@ -610,12 +717,12 @@ def export_csv():
     if not admin_ok():
         return admin_fail()
     rows = get_db().execute(
-        "SELECT p.code participant_code, p.nickname, t.trial_type, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
+        "SELECT p.code participant_code, p.nickname, p.gender, p.age, p.education, t.trial_type, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
         "FROM responses r JOIN trials t ON r.trial_id=t.id JOIN participants p ON t.participant_id=p.id ORDER BY r.id"
     ).fetchall()
     buf = StringIO()
     writer = csv.writer(buf)
-    writer.writerow(['participant_code', 'nickname', 'trial_type', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
+    writer.writerow(['participant_code', 'nickname', 'gender', 'age', 'education', 'trial_type', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
     for row in rows:
         writer.writerow([row[k] for k in row.keys()])
     return Response(buf.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=responses.csv'})
