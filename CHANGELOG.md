@@ -1,3 +1,8 @@
+## 2026-04-16 — Add Demographic Timeline Tables
+- Changed admin demographic statistics from all-phase summaries to phase-by-phase matrices for immediate, 1 day, 1 week, and 2 weeks.
+- Shows complete-round counts plus object low/high and biological low/high accuracy for each demographic group.
+- Uses collapsible demographic panels to keep gender, age group, and education statistics easier to scan.
+
 ## 2026-04-16 — Rename Higher Education Option
 - Renamed the highest education choice from 本科及以上 to 大专/本科及以上.
 - Added startup migration so existing participant rows and SQLite CHECK constraints accept the new label.

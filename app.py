@@ -544,66 +544,63 @@ def admin():
     age_rows = db.execute(
         "SELECT age, COUNT(*) c FROM participants WHERE age IN ('20岁及以下','40岁及以下','40岁以上') GROUP BY age ORDER BY age"
     ).fetchall()
-    gender_accuracy_rows = db.execute(
-        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
-        "FROM ("
-        "  SELECT p.gender label, p.id participant_id, r.phase, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
-        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
-        "  WHERE p.gender IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.gender, p.id, r.phase"
-        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
-        "GROUP BY label"
-    ).fetchall()
-    education_accuracy_rows = db.execute(
-        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
-        "FROM ("
-        "  SELECT p.education label, p.id participant_id, r.phase, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
-        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
-        "  WHERE p.education IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.education, p.id, r.phase"
-        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
-        "GROUP BY label"
-    ).fetchall()
-    age_accuracy_rows = db.execute(
-        "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
-        "FROM ("
-        "  SELECT p.age label, p.id participant_id, r.phase, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
-        "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
-        "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
-        "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
-        "  WHERE p.age IN ('20岁及以下','40岁及以下','40岁以上') AND r.phase IN ('immediate','day','week','2week') GROUP BY p.age, p.id, r.phase"
-        ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
-        "GROUP BY label ORDER BY label"
-    ).fetchall()
-
-    def demo_row(label, participant_count, accuracy_row):
-        return {
-            'label': label,
-            'participant_count': participant_count,
-            'response_count': accuracy_row['response_count'] if accuracy_row else 0,
-            'object_low': accuracy_row['object_low'] if accuracy_row else None,
-            'object_high': accuracy_row['object_high'] if accuracy_row else None,
-            'bio_low': accuracy_row['bio_low'] if accuracy_row else None,
-            'bio_high': accuracy_row['bio_high'] if accuracy_row else None,
-        }
-
     gender_map = {row['gender']: row['c'] for row in gender_rows}
     education_map = {row['education']: row['c'] for row in education_rows}
     age_map = {row['age']: row['c'] for row in age_rows}
-    gender_accuracy_map = {row['label']: row for row in gender_accuracy_rows}
-    education_accuracy_map = {row['label']: row for row in education_accuracy_rows}
-    age_accuracy_map = {row['label']: row for row in age_accuracy_rows}
-    gender_counts = [demo_row(gender, gender_map.get(gender, 0), gender_accuracy_map.get(gender)) for gender in GENDERS]
-    education_counts = [demo_row(education, education_map.get(education, 0), education_accuracy_map.get(education)) for education in EDUCATIONS]
-    age_counts = [demo_row(age, age_map.get(age, 0), age_accuracy_map.get(age)) for age in AGE_GROUPS]
+
+    def format_pct(value):
+        return f"{value * 100:.1f}%" if value is not None else '—'
+
+    def build_demo_section(title, field, labels, count_map):
+        if field not in {'gender', 'education', 'age'}:
+            raise ValueError('invalid demographic field')
+        phase_rows = db.execute(
+            f"SELECT label, phase, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
+            "FROM ("
+            f"  SELECT p.{field} label, p.id participant_id, r.phase, "
+            "  MAX(CASE WHEN t.trial_type = 'object' THEN r.category_correct END) object_low, "
+            "  MAX(CASE WHEN t.trial_type = 'object' THEN r.material_correct END) object_high, "
+            "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
+            "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
+            "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
+            f"  WHERE p.{field} IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.{field}, p.id, r.phase"
+            ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
+            "GROUP BY label, phase"
+        ).fetchall()
+        phase_map = {(row['label'], row['phase']): row for row in phase_rows}
+
+        def cells(label, key, is_percent=False):
+            values = []
+            for phase in PHASE_ORDER:
+                row = phase_map.get((label, phase))
+                value = row[key] if row else None
+                values.append(format_pct(value) if is_percent else (value or 0))
+            return values
+
+        groups = []
+        metric_defs = [
+            ('完整次数', 'response_count', False),
+            ('物体低频', 'object_low', True),
+            ('物体高频', 'object_high', True),
+            ('生物低频', 'bio_low', True),
+            ('生物高频', 'bio_high', True),
+        ]
+        for label in labels:
+            groups.append({
+                'label': label,
+                'participant_count': count_map.get(label, 0),
+                'metrics': [
+                    {'label': metric_label, 'cells': cells(label, key, is_percent)}
+                    for metric_label, key, is_percent in metric_defs
+                ],
+            })
+        return {'title': title, 'groups': groups}
+
+    demo_sections = [
+        build_demo_section('性别', 'gender', GENDERS, gender_map),
+        build_demo_section('年龄段', 'age', AGE_GROUPS, age_map),
+        build_demo_section('学历', 'education', EDUCATIONS, education_map),
+    ]
     obj_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in obj_accuracy}
     dog_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in dog_accuracy}
 
@@ -685,9 +682,7 @@ def admin():
         'phase_counts': phase_counts,
         'accuracy': accuracy,
         'recent': recent,
-        'gender_counts': gender_counts,
-        'education_counts': education_counts,
-        'age_counts': age_counts,
+        'demo_sections': demo_sections,
     }
     return render_template(
         'admin.html',

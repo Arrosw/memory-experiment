@@ -42,6 +42,36 @@
     font-size: 12px;
     line-height: 1.45;
   }
+  .demo-panel {
+    background: var(--bg);
+    border-radius: var(--r-sm);
+    padding: var(--s3) var(--s4);
+    margin-top: var(--s3);
+  }
+  .demo-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+    list-style-position: inside;
+  }
+  .demo-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+    margin-top: var(--s3);
+    background: var(--card);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+  }
+  .demo-table th,
+  .demo-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--separator);
+    font-size: 13px;
+  }
+  .demo-table th {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
@@ -57,97 +87,43 @@
 
   <div class="card">
     <h2>人口学统计</h2>
-    <p style="font-size:14px;margin-bottom:var(--s4);">作答次数按同一参与者同一阶段的物体和狗都完成计 1 次。</p>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-bottom:var(--s4);">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in stats.gender_counts %}
-            <tr>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-bottom:var(--s4);">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in stats.education_counts %}
-            <tr>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:860px;margin-top:var(--s4);">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄段</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体高频（材质）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物低频（狗类别）</th>
-            <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">生物高频（背景）</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in stats.age_counts %}
-            <tr>
-              <td style="padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.label }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.participant_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ row.response_count }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_low * 100) if row.object_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.object_high * 100) if row.object_high is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_low * 100) if row.bio_low is not none else '—' }}</td>
-              <td style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">{{ '%.1f%%'|format(row.bio_high * 100) if row.bio_high is not none else '—' }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="7" style="padding:12px 0;color:var(--text-secondary);">暂无数据</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <p style="font-size:14px;margin-bottom:var(--s4);">每个阶段中，物体和狗都完成才计 1 次。可点击各项折叠。</p>
+    {% for section in stats.demo_sections %}
+      <details class="demo-panel" {% if loop.first %}open{% endif %}>
+        <summary>{{ section.title }}</summary>
+        <div style="overflow-x:auto;">
+          <table class="demo-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;">分组</th>
+                <th style="text-align:right;">人数</th>
+                <th style="text-align:left;">指标</th>
+                <th style="text-align:right;">即时</th>
+                <th style="text-align:right;">一天</th>
+                <th style="text-align:right;">一周</th>
+                <th style="text-align:right;">两周</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for group in section.groups %}
+                {% for metric in group.metrics %}
+                  <tr>
+                    {% if loop.first %}
+                      <td rowspan="{{ group.metrics|length }}" style="text-align:left;font-weight:600;">{{ group.label }}</td>
+                      <td rowspan="{{ group.metrics|length }}" style="text-align:right;">{{ group.participant_count }}</td>
+                    {% endif %}
+                    <td style="text-align:left;color:var(--text-secondary);">{{ metric.label }}</td>
+                    {% for value in metric.cells %}
+                      <td style="text-align:right;">{{ value }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% endfor %}
   </div>
 
   <div class="card">
