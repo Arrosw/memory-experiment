@@ -31,7 +31,12 @@
           <option value="{{ gender }}" {% if form and form.gender == gender %}selected{% endif %}>{{ gender }}</option>
         {% endfor %}
       </select>
-      <input class="input mt-4" type="number" name="age" placeholder="请输入年龄" min="1" max="120" inputmode="numeric" value="{{ form.age if form else '' }}" required>
+      <select class="input mt-4" name="age" required>
+        <option value="">请选择年龄段</option>
+        {% for age_group in age_groups %}
+          <option value="{{ age_group }}" {% if form and form.age == age_group %}selected{% endif %}>{{ age_group }}</option>
+        {% endfor %}
+      </select>
       <select class="input mt-4" name="education" required>
         <option value="">请选择学历</option>
         {% for education in educations %}

@@ -3,6 +3,7 @@ MATERIALS = ['wood', 'stone', 'ceramic', 'metal', 'glass']
 DOG_BREEDS = ['german shepherd', 'golden retriever', 'husky', 'labrador', 'shiba inu']
 DOG_BACKGROUNDS = ['dry_grassy_ground', 'dusty_ground', 'fine_gravel_ground', 'sand_ground', 'slightly_damp_dirt']
 GENDERS = ['男', '女']
+AGE_GROUPS = ['20岁及以下', '40岁及以下', '40岁以上']
 EDUCATIONS = ['初中及以下', '高中/中专', '本科及以上']
 ANIMALS = ['Tiger', 'Panda', 'Eagle', 'Whale', 'Fox', 'Bear', 'Wolf', 'Hawk', 'Deer', 'Lynx',
            'Crow', 'Dove', 'Swan', 'Seal', 'Orca', 'Moth', 'Frog', 'Newt', 'Crab', 'Wren']
@@ -24,7 +25,7 @@ def init_db(db):
         code TEXT UNIQUE NOT NULL,
         nickname TEXT,
         gender TEXT CHECK(gender IN ('男','女')),
-        age INTEGER,
+        age TEXT CHECK(age IN ('20岁及以下','40岁及以下','40岁以上')),
         education TEXT CHECK(education IN ('初中及以下','高中/中专','本科及以上')),
         created_at TIMESTAMP
     );
@@ -62,7 +63,7 @@ def init_db(db):
         pass  # column already exists
     for sql in (
         "ALTER TABLE participants ADD COLUMN gender TEXT CHECK(gender IN ('男','女'))",
-        "ALTER TABLE participants ADD COLUMN age INTEGER",
+        "ALTER TABLE participants ADD COLUMN age TEXT CHECK(age IN ('20岁及以下','40岁及以下','40岁以上'))",
         "ALTER TABLE participants ADD COLUMN education TEXT CHECK(education IN ('初中及以下','高中/中专','本科及以上'))",
     ):
         try:
@@ -70,6 +71,22 @@ def init_db(db):
             db.commit()
         except Exception:
             pass  # column already exists
+    try:
+        db.execute("""
+            UPDATE participants
+            SET age = CASE
+                WHEN CAST(age AS INTEGER) <= 20 THEN '20岁及以下'
+                WHEN CAST(age AS INTEGER) <= 40 THEN '40岁及以下'
+                ELSE '40岁以上'
+            END
+            WHERE age IS NOT NULL
+              AND age NOT IN ('20岁及以下','40岁及以下','40岁以上')
+              AND CAST(age AS TEXT) != ''
+              AND CAST(age AS TEXT) NOT GLOB '*[^0-9]*'
+        """)
+        db.commit()
+    except Exception:
+        db.rollback()
     schema_row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='responses'").fetchone()
     if schema_row and ",'3day'," in schema_row['sql']:
         try:

@@ -118,16 +118,11 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-bottom:0;">
-      年龄样本：<strong>{{ stats.age_summary.c or 0 }}</strong>，
-      平均：<strong>{{ '%.1f'|format(stats.age_summary.avg_age) if stats.age_summary.avg_age is not none else '—' }}</strong>，
-      最小/最大：<strong>{{ stats.age_summary.min_age if stats.age_summary.min_age is not none else '—' }} / {{ stats.age_summary.max_age if stats.age_summary.max_age is not none else '—' }}</strong>
-    </p>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;min-width:860px;margin-top:var(--s4);">
         <thead>
           <tr>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄段</th>
             <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">人数</th>
             <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">作答次数</th>
             <th style="text-align:right;padding:12px 0;border-bottom:1px solid var(--separator);">物体低频（物体类别）</th>
@@ -654,7 +649,7 @@
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">姓名</th>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
-          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+          <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄段</th>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
           <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">注册时间</th>
         </tr>
@@ -688,7 +683,7 @@
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">参与码</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">姓名</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">性别</th>
-            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄</th>
+            <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">年龄段</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">学历</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">类型</th>
             <th style="text-align:left;padding:12px 0;border-bottom:1px solid var(--separator);">物体/狗</th>

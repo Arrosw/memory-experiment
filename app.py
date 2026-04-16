@@ -11,7 +11,7 @@ from pathlib import Path
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, ImageDraw, ImageFont
 
-from config import ADMIN_PASS, ADMIN_USER, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, EDUCATIONS, GENDERS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, init_db
+from config import ADMIN_PASS, ADMIN_USER, AGE_GROUPS, ANIMALS, CATEGORIES, DAY_WINDOW, DB_PATH, DEBUG_SKIP_WINDOWS, DOG_BACKGROUNDS, DOG_BREEDS, EDUCATIONS, GENDERS, MATERIALS, STUDY_DURATION_SECONDS, TRIALS_PER_PARTICIPANT, WEEK_WINDOW, WEEK2_WINDOW, init_db
 
 MATERIAL_COLORS = {
     'wood': '#D2A679', 'plastic': '#4FC3F7', 'metal': '#B0BEC5',
@@ -209,7 +209,7 @@ def current_trial_for_study(db, participant_id: int):
 
 @app.get('/')
 def index():
-    return render_template('index.html', genders=GENDERS, educations=EDUCATIONS)
+    return render_template('index.html', genders=GENDERS, age_groups=AGE_GROUPS, educations=EDUCATIONS)
 
 
 @app.post('/register')
@@ -218,28 +218,24 @@ def register():
     code = generate_code(db)
     nickname = request.form.get('nickname', '').strip()
     gender = request.form.get('gender', '').strip()
-    age_raw = request.form.get('age', '').strip()
+    age = request.form.get('age', '').strip()
     education = request.form.get('education', '').strip()
     error = None
-    try:
-        age = int(age_raw)
-    except ValueError:
-        age = None
-        error = '请填写有效年龄'
     if not nickname:
         error = '请填写姓名'
     elif gender not in GENDERS:
         error = '请选择性别'
-    elif age is None or age < 1 or age > 120:
-        error = '请填写有效年龄'
+    elif age not in AGE_GROUPS:
+        error = '请选择年龄段'
     elif education not in EDUCATIONS:
         error = '请选择学历'
     if error:
         return render_template(
             'index.html',
             error=error,
-            form={'nickname': nickname, 'gender': gender, 'age': age_raw, 'education': education},
+            form={'nickname': nickname, 'gender': gender, 'age': age, 'education': education},
             genders=GENDERS,
+            age_groups=AGE_GROUPS,
             educations=EDUCATIONS,
         ), 400
     db.execute(
@@ -546,7 +542,7 @@ def admin():
         "SELECT education, COUNT(*) c FROM participants WHERE education IS NOT NULL GROUP BY education ORDER BY education"
     ).fetchall()
     age_rows = db.execute(
-        "SELECT age, COUNT(*) c FROM participants WHERE age IS NOT NULL GROUP BY age ORDER BY age"
+        "SELECT age, COUNT(*) c FROM participants WHERE age IN ('20岁及以下','40岁及以下','40岁以上') GROUP BY age ORDER BY age"
     ).fetchall()
     gender_accuracy_rows = db.execute(
         "SELECT label, COUNT(*) response_count, AVG(object_low) object_low, AVG(object_high) object_high, AVG(bio_low) bio_low, AVG(bio_high) bio_high "
@@ -583,7 +579,7 @@ def admin():
         "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.category_correct END) bio_low, "
         "  MAX(CASE WHEN t.trial_type = 'dog' THEN r.material_correct END) bio_high "
         "  FROM responses r JOIN trials t ON r.trial_id = t.id JOIN participants p ON t.participant_id = p.id "
-        "  WHERE p.age IS NOT NULL AND r.phase IN ('immediate','day','week','2week') GROUP BY p.age, p.id, r.phase"
+        "  WHERE p.age IN ('20岁及以下','40岁及以下','40岁以上') AND r.phase IN ('immediate','day','week','2week') GROUP BY p.age, p.id, r.phase"
         ") WHERE object_low IS NOT NULL AND object_high IS NOT NULL AND bio_low IS NOT NULL AND bio_high IS NOT NULL "
         "GROUP BY label ORDER BY label"
     ).fetchall()
@@ -607,10 +603,7 @@ def admin():
     age_accuracy_map = {row['label']: row for row in age_accuracy_rows}
     gender_counts = [demo_row(gender, gender_map.get(gender, 0), gender_accuracy_map.get(gender)) for gender in GENDERS]
     education_counts = [demo_row(education, education_map.get(education, 0), education_accuracy_map.get(education)) for education in EDUCATIONS]
-    age_counts = [demo_row(age, age_map[age], age_accuracy_map.get(age)) for age in sorted(age_map)]
-    age_summary = db.execute(
-        "SELECT COUNT(age) c, AVG(age) avg_age, MIN(age) min_age, MAX(age) max_age FROM participants WHERE age IS NOT NULL"
-    ).fetchone()
+    age_counts = [demo_row(age, age_map.get(age, 0), age_accuracy_map.get(age)) for age in AGE_GROUPS]
     obj_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in obj_accuracy}
     dog_acc_map = {r['phase']: {'cat': r['ac'], 'mat': r['am']} for r in dog_accuracy}
 
@@ -695,7 +688,6 @@ def admin():
         'gender_counts': gender_counts,
         'education_counts': education_counts,
         'age_counts': age_counts,
-        'age_summary': age_summary,
     }
     return render_template(
         'admin.html',
@@ -717,12 +709,12 @@ def export_csv():
     if not admin_ok():
         return admin_fail()
     rows = get_db().execute(
-        "SELECT p.code participant_code, p.nickname, p.gender, p.age, p.education, t.trial_type, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
+        "SELECT p.code participant_code, p.nickname, p.gender, p.age age_group, p.education, t.trial_type, t.category, t.material, r.phase, r.responded_at, r.resp_category, r.resp_material, r.resp_col, r.resp_row, r.category_correct, r.material_correct, r.response_time_ms "
         "FROM responses r JOIN trials t ON r.trial_id=t.id JOIN participants p ON t.participant_id=p.id ORDER BY r.id"
     ).fetchall()
     buf = StringIO()
     writer = csv.writer(buf)
-    writer.writerow(['participant_code', 'nickname', 'gender', 'age', 'education', 'trial_type', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
+    writer.writerow(['participant_code', 'nickname', 'gender', 'age_group', 'education', 'trial_type', 'category', 'material', 'phase', 'responded_at', 'resp_category', 'resp_material', 'resp_col', 'resp_row', 'category_correct', 'material_correct', 'response_time_ms'])
     for row in rows:
         writer.writerow([row[k] for k in row.keys()])
     return Response(buf.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=responses.csv'})

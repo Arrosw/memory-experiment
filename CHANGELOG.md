@@ -1,3 +1,8 @@
+## 2026-04-16 — Use Age Group Registration
+- Replaced free-text numeric age entry with fixed age group choices: 20岁及以下, 40岁及以下, and 40岁以上.
+- Updated admin demographic statistics to report age groups in the same format as gender and education.
+- Added startup migration to bucket existing numeric ages into the new age group values.
+
 ## 2026-04-16 — Finalize Four Phase Demographics
 - Added required registration demographics for name, gender, age, and education.
 - Switched experiment timing to Beijing time for registration, study start, and recall responses.
